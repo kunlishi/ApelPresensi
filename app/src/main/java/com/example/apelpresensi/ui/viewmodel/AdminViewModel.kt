@@ -1,0 +1,42 @@
+package com.example.apelpresensi.ui.viewmodel
+
+import androidx.compose.runtime.*
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.apelpresensi.data.local.PreferenceManager
+import com.example.apelpresensi.data.remote.dto.JadwalRequest
+import com.example.apelpresensi.data.remote.dto.JadwalResponse
+import com.example.apelpresensi.data.repository.AdminRepository
+import kotlinx.coroutines.launch
+
+class AdminViewModel(
+    private val repository: AdminRepository,
+    private val prefManager: PreferenceManager
+) : ViewModel() {
+    var jadwalList by mutableStateOf<List<JadwalResponse>>(emptyList())
+    var isLoading by mutableStateOf(false)
+    var errorMessage by mutableStateOf<String?>(null)
+
+    fun fetchJadwal() {
+        val token = prefManager.getAuthToken() ?: return
+        viewModelScope.launch {
+            isLoading = true
+            try {
+                val response = repository.getAllJadwal(token)
+                if (response.isSuccessful) jadwalList = response.body() ?: emptyList()
+            } catch (e: Exception) { errorMessage = e.message }
+            isLoading = false
+        }
+    }
+
+    fun addJadwal(tanggal: String, waktu: String, tingkat: String, ket: String) {
+        val token = prefManager.getAuthToken() ?: return
+        viewModelScope.launch {
+            try {
+                val request = JadwalRequest(tanggal, waktu, tingkat, ket)
+                val response = repository.createJadwal(token, request)
+                if (response.isSuccessful) fetchJadwal()
+            } catch (e: Exception) { errorMessage = e.message }
+        }
+    }
+}

@@ -16,7 +16,8 @@ import com.example.apelpresensi.ui.viewmodel.AuthViewModel
 @Composable
 fun LoginScreen(
     viewModel: AuthViewModel,
-    onLoginSuccess: (String) -> Unit // Callback untuk navigasi berdasarkan role
+    onLoginSuccess: (String) -> Unit, // Callback untuk navigasi berdasarkan role
+    onRegisterClick: () -> Unit
 ) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -75,6 +76,11 @@ fun LoginScreen(
             } else {
                 Text("Login")
             }
+        }
+
+        // Tambahkan tombol daftar di bawah tombol login
+        TextButton(onClick = onRegisterClick) {
+            Text("Belum punya akun? Daftar Mahasiswa")
         }
 
         // Menampilkan Pesan Error

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.apelpresensi.data.local.PreferenceManager
 import com.example.apelpresensi.data.remote.dto.AuthResponse
 import com.example.apelpresensi.data.remote.dto.LoginRequest
+import com.example.apelpresensi.data.remote.dto.RegisterRequest
 import com.example.apelpresensi.data.repository.AuthRepository
 import kotlinx.coroutines.launch
 
@@ -43,6 +44,23 @@ class AuthViewModel(
                 }
             } catch (e: Exception) {
                 _authState.value = AuthState.Error("Terjadi kesalahan jaringan: ${e.message}")
+            }
+        }
+    }
+
+    // Di dalam class AuthViewModel
+    fun register(request: RegisterRequest) {
+        viewModelScope.launch {
+            _authState.value = AuthState.Loading
+            try {
+                val response = repository.register(request)
+                if (response.isSuccessful && response.body() != null) {
+                    _authState.value = AuthState.Success(response.body()!!)
+                } else {
+                    _authState.value = AuthState.Error("Registrasi Gagal: Data tidak valid atau NIM sudah terdaftar")
+                }
+            } catch (e: Exception) {
+                _authState.value = AuthState.Error("Kesalahan jaringan: ${e.message}")
             }
         }
     }
