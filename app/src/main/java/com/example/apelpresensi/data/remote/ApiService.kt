@@ -1,13 +1,10 @@
 package com.example.apelpresensi.data.remote
 
 import com.example.apelpresensi.data.remote.dto.*
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.POST
-import retrofit2.http.GET
-import retrofit2.http.DELETE
-import retrofit2.http.Path
-import retrofit2.http.Header
+import retrofit2.http.*
 
 interface ApiService {
     @POST("api/auth/login")
@@ -48,5 +45,15 @@ interface ApiService {
     suspend fun deleteJadwal(
         @Header("Authorization") token: String,
         @Path("id") id: Long
+    ): Response<Void>
+
+    // Di dalam interface ApiService
+    @Multipart
+    @POST("api/mahasiswa/izin")
+    suspend fun submitIzin(
+        @Header("Authorization") token: String,
+        @Part("keterangan") keterangan: RequestBody,
+        @Part("tanggal") tanggal: RequestBody,
+        @Part file: MultipartBody.Part
     ): Response<Void>
 }

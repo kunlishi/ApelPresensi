@@ -13,26 +13,47 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.apelpresensi.ui.components.MainTopAppBar
 import com.example.apelpresensi.ui.viewmodel.AdminViewModel
 @Composable
-fun AdminDashboard(viewModel: AdminViewModel, onLogout: () -> Unit) {
+fun AdminDashboard(
+    viewModel: AdminViewModel,
+    onLogout: () -> Unit,
+    onProfileClick: () -> Unit // Tambahkan parameter ini
+) {
     var showDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) { viewModel.fetchJadwal() }
+    LaunchedEffect(Unit) {
+        viewModel.fetchJadwal()
+    }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Panel Admin - Jadwal") }) },
+        topBar = {
+            MainTopAppBar(
+                title = "Panel Admin",
+                onLogoutClick = onLogout,
+                onProfileClick = onProfileClick
+            )
+        },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showDialog = true }) {
+            FloatingActionButton(
+                onClick = { showDialog = true },
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
                 Icon(Icons.Default.Add, contentDescription = "Tambah Jadwal")
             }
         }
     ) { padding ->
-        LazyColumn(modifier = Modifier.padding(padding).fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
             items(viewModel.jadwalList) { jadwal ->
                 ListItem(
                     headlineContent = { Text("Tingkat ${jadwal.tingkat} - ${jadwal.tanggalApel}") },
-                    supportingContent = { Text("Jam: ${jadwal.waktuApel} | ${jadwal.keterangan ?: ""}") }
+                    supportingContent = { Text("Jam: ${jadwal.waktuApel} | ${jadwal.keterangan ?: ""}") },
+                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background)
                 )
                 HorizontalDivider()
             }

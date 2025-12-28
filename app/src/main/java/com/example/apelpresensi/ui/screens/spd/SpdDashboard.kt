@@ -6,33 +6,50 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.apelpresensi.ui.components.MainTopAppBar
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SpdDashboard(
     onScanClick: (String) -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onProfileClick: () -> Unit // Tambahkan parameter ini
 ) {
     var selectedTingkat by remember { mutableStateOf("1") }
     val tingkatOptions = listOf("1", "2", "3", "4")
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Petugas SPD") }) }
+        topBar = {
+            MainTopAppBar(
+                title = "Petugas SPD",
+                onLogoutClick = onLogout,
+                onProfileClick = onProfileClick
+            )
+        }
     ) { padding ->
         Column(
-            modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp),
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Pilih Tingkat Apel:", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = "Pilih Tingkat Apel:",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
 
-            Row(Modifier.padding(8.dp)) {
+            Row(
+                Modifier.padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 tingkatOptions.forEach { tingkat ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(
                             selected = (selectedTingkat == tingkat),
                             onClick = { selectedTingkat = tingkat }
                         )
-                        Text(tingkat)
+                        Text(text = tingkat, color = MaterialTheme.colorScheme.onBackground)
                     }
                 }
             }
@@ -41,13 +58,12 @@ fun SpdDashboard(
 
             Button(
                 onClick = { onScanClick(selectedTingkat) },
-                modifier = Modifier.fillMaxWidth().height(56.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
             ) {
-                Text("Buka Scanner QR")
+                Text("BUKA SCANNER QR")
             }
-
-            Spacer(modifier = Modifier.weight(1f))
-            TextButton(onClick = onLogout) { Text("Logout", color = MaterialTheme.colorScheme.error) }
         }
     }
 }

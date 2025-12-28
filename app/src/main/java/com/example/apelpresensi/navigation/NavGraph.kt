@@ -9,8 +9,10 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.apelpresensi.data.local.PreferenceManager
+import com.example.apelpresensi.data.remote.RetrofitClient
 import com.example.apelpresensi.data.repository.AdminRepository
 import com.example.apelpresensi.data.repository.PresensiRepository
+import com.example.apelpresensi.data.repository.MahasiswaRepository
 import com.example.apelpresensi.ui.screens.auth.LoginScreen
 import com.example.apelpresensi.ui.screens.mahasiswa.StudentDashboard
 import com.example.apelpresensi.ui.screens.mahasiswa.StudentQrScreen
@@ -18,6 +20,7 @@ import com.example.apelpresensi.ui.screens.spd.SpdDashboard
 import com.example.apelpresensi.ui.screens.spd.QrScannerScreen
 import com.example.apelpresensi.ui.screens.admin.AdminDashboard
 import com.example.apelpresensi.ui.screens.auth.RegisterScreen
+import com.example.apelpresensi.ui.screens.mahasiswa.IzinScreen
 
 import com.example.apelpresensi.ui.viewmodel.AuthViewModel
 import com.example.apelpresensi.ui.viewmodel.MahasiswaState
@@ -32,6 +35,7 @@ fun NavGraph(
     authViewModel: AuthViewModel,
     adminRepository: AdminRepository,
     presensiRepository: PresensiRepository,
+    mahasiswaRepository: MahasiswaRepository,
     prefManager: PreferenceManager
 ) {
     NavHost(
@@ -77,7 +81,6 @@ fun NavGraph(
 
         // Placeholder untuk Dashboard (Akan kita isi nanti)
         composable(Screen.AdminDashboard.route) {
-            // Inisialisasi AdminViewModel di sini
             val adminViewModel: AdminViewModel = viewModel(
                 factory = object : ViewModelProvider.Factory {
                     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -90,7 +93,8 @@ fun NavGraph(
                 onLogout = {
                     authViewModel.logout()
                     navController.navigate(Screen.Login.route) { popUpTo(0) }
-                }
+                },
+                onProfileClick = { /* Aksi profil admin */ }
             )
         }
 
@@ -102,17 +106,25 @@ fun NavGraph(
                 onLogout = {
                     authViewModel.logout()
                     navController.navigate(Screen.Login.route) { popUpTo(0) }
-                }
+                },
+                onProfileClick = { /* Aksi profil petugas SPD */ }
             )
         }
 
+        // Di dalam NavGraph.kt pada bagian composable StudentDashboard
         composable(Screen.StudentDashboard.route) {
-            val mahasiswaViewModel: MahasiswaViewModel = viewModel() // Inisialisasi ViewModel
+            val mhsViewModel: MahasiswaViewModel = viewModel(
+                factory = object : ViewModelProvider.Factory {
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                        return MahasiswaViewModel(mahasiswaRepository, prefManager) as T
+                    }
+                }
+            )
+
             StudentDashboard(
-                viewModel = mahasiswaViewModel,
+                viewModel = mhsViewModel,
                 onShowQrClick = {
-                    // Ambil NIM dari state sukses untuk di-generate jadi QR
-                    val nim = (mahasiswaViewModel.profileState.value as? MahasiswaState.Success)?.data?.nim ?: ""
+                    val nim = (mhsViewModel.profileState.value as? MahasiswaState.Success)?.data?.nim ?: ""
                     navController.navigate("qr_screen/$nim")
                 },
                 onLogout = {
@@ -120,6 +132,33 @@ fun NavGraph(
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0)
                     }
+                },
+                onProfileClick = {
+                    // Logika info akun, misalnya munculkan SnackBar atau navigasi ke ProfileScreen
+                    // navController.navigate(Screen.Profile.route)
+                }
+            )
+        }
+        // Di dalam NavGraph.kt
+        composable(Screen.Izin.route) {
+            // Inisialisasi Repository
+            val mahasiswaRepository = MahasiswaRepository(RetrofitClient.apiService)
+
+            // Inisialisasi ViewModel dengan Factory
+            val mhsViewModel: MahasiswaViewModel = viewModel(
+                factory = object : ViewModelProvider.Factory {
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                        return MahasiswaViewModel(mahasiswaRepository, prefManager) as T
+                    }
+                }
+            )
+
+            IzinScreen(
+                viewModel = mhsViewModel,
+                onBack = { navController.popBackStack() },
+                onLogout = {
+                    authViewModel.logout()
+                    navController.navigate(Screen.Login.route) { popUpTo(0) }
                 }
             )
         }
@@ -135,7 +174,15 @@ fun NavGraph(
 
         composable("qr_scanner/{tingkat}") { backStackEntry ->
             val tingkat = backStackEntry.arguments?.getString("tingkat") ?: "1"
-            val spdViewModel: SpdViewModel = viewModel()
+
+            // Pastikan menggunakan Factory agar ViewModel tidak null
+            val spdViewModel: SpdViewModel = viewModel(
+                factory = object : ViewModelProvider.Factory {
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                        return SpdViewModel(presensiRepository, prefManager) as T
+                    }
+                }
+            )
 
             QrScannerScreen(
                 tingkat = tingkat,
@@ -143,5 +190,6 @@ fun NavGraph(
                 onBack = { navController.popBackStack() }
             )
         }
+
     }
 }
