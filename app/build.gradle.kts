@@ -91,4 +91,6 @@ dependencies {
 
     // Guava (Sering dibutuhkan oleh CameraX untuk ListenableFuture)
     implementation("com.google.guava:guava:31.1-android")
+
+    implementation(libs.androidx.compose.material.icons.extended)
 }

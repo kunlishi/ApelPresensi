@@ -15,6 +15,7 @@ import com.example.apelpresensi.ui.viewmodel.MahasiswaViewModel
 fun StudentDashboard(
     viewModel: MahasiswaViewModel,
     onShowQrClick: () -> Unit,
+    onIzinClick: () -> Unit,
     onLogout: () -> Unit,
     onProfileClick: () -> Unit // Tambahkan callback untuk profil
 ) {
@@ -83,6 +84,18 @@ fun StudentDashboard(
                         shape = MaterialTheme.shapes.medium
                     ) {
                         Text("TAMPILKAN QR PRESENSI")
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = onIzinClick,
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary
+                        )
+                    ) {
+                        Text("PENGAJUAN IZIN / SAKIT")
                     }
                 }
                 is MahasiswaState.Error -> {

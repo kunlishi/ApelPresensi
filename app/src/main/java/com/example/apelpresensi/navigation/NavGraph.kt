@@ -127,24 +127,17 @@ fun NavGraph(
                     val nim = (mhsViewModel.profileState.value as? MahasiswaState.Success)?.data?.nim ?: ""
                     navController.navigate("qr_screen/$nim")
                 },
+                onIzinClick = { navController.navigate(Screen.Izin.route) }, // Hubungkan ke Izin
                 onLogout = {
                     authViewModel.logout()
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(0)
-                    }
+                    navController.navigate(Screen.Login.route) { popUpTo(0) }
                 },
-                onProfileClick = {
-                    // Logika info akun, misalnya munculkan SnackBar atau navigasi ke ProfileScreen
-                    // navController.navigate(Screen.Profile.route)
-                }
+                onProfileClick = { /* Info Akun */ }
             )
         }
-        // Di dalam NavGraph.kt
-        composable(Screen.Izin.route) {
-            // Inisialisasi Repository
-            val mahasiswaRepository = MahasiswaRepository(RetrofitClient.apiService)
 
-            // Inisialisasi ViewModel dengan Factory
+        composable(Screen.Izin.route) {
+            // Gunakan mahasiswaRepository dari parameter NavGraph, jangan inisialisasi ulang
             val mhsViewModel: MahasiswaViewModel = viewModel(
                 factory = object : ViewModelProvider.Factory {
                     override fun <T : ViewModel> create(modelClass: Class<T>): T {

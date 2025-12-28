@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.apelpresensi.data.local.PreferenceManager
 import com.example.apelpresensi.data.remote.dto.MahasiswaResponse
+import com.example.apelpresensi.data.remote.dto.PresensiResponse
 import com.example.apelpresensi.data.repository.MahasiswaRepository
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -17,6 +18,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.collections.emptyList
 
 // State untuk Profil
 sealed class MahasiswaState {
@@ -91,13 +93,41 @@ class MahasiswaViewModel(
     }
 
     private fun prepareFilePart(context: Context, partName: String, fileUri: Uri): MultipartBody.Part {
+        // 1. Dapatkan tipe MIME asli dari file (image/jpeg, application/pdf, dll)
+        val mimeType = context.contentResolver.getType(fileUri) ?: "application/octet-stream"
+
+        // 2. Tentukan ekstensi file sementara berdasarkan tipe MIME
+        val extension = when (mimeType) {
+            "application/pdf" -> ".pdf"
+            "image/png" -> ".png"
+            else -> ".jpg"
+        }
+
         val inputStream = context.contentResolver.openInputStream(fileUri)
-        val tempFile = File.createTempFile("upload_", ".jpg", context.cacheDir)
+        val tempFile = File.createTempFile("upload_", extension, context.cacheDir)
         tempFile.outputStream().use { output ->
             inputStream?.copyTo(output)
         }
 
-        val requestFile = tempFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
+        // 3. Gunakan mimeType yang dinamis untuk requestBody
+        val requestFile = tempFile.asRequestBody(mimeType.toMediaTypeOrNull())
+
         return MultipartBody.Part.createFormData(partName, tempFile.name, requestFile)
+    }
+    private val _riwayatList = mutableStateOf<List<PresensiResponse>>(emptyList())
+    val riwayatList: State<List<PresensiResponse>> = _riwayatList
+
+    fun fetchRiwayat() {
+        val token = prefManager.getAuthToken() ?: return
+        viewModelScope.launch {
+            try {
+                val response = repository.getRiwayat(token)
+                if (response.isSuccessful) {
+                    _riwayatList.value = response.body() ?: emptyList()
+                }
+            } catch (e: Exception) {
+                // Handle error jika diperlukan
+            }
+        }
     }
 }

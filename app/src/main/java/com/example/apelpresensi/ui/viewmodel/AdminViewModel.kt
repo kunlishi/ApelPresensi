@@ -38,4 +38,20 @@ class AdminViewModel(
             } catch (e: Exception) { errorMessage = e.message }
         }
     }
+    // Tambahkan di dalam class AdminViewModel
+    fun deleteJadwal(id: Long) {
+        val token = prefManager.getAuthToken() ?: return
+        viewModelScope.launch {
+            try {
+                val response = repository.deleteJadwal(token, id)
+                if (response.isSuccessful) {
+                    fetchJadwal() // Refresh daftar setelah menghapus
+                } else {
+                    errorMessage = "Gagal menghapus jadwal"
+                }
+            } catch (e: Exception) {
+                errorMessage = e.message
+            }
+        }
+    }
 }

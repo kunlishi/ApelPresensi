@@ -2,6 +2,7 @@ package com.example.apelpresensi.data.repository
 
 import com.example.apelpresensi.data.remote.ApiService
 import com.example.apelpresensi.data.remote.dto.MahasiswaResponse
+import com.example.apelpresensi.data.remote.dto.PresensiResponse
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -22,4 +23,8 @@ class MahasiswaRepository(private val apiService: ApiService) {
 
         return apiService.submitIzin("Bearer $token", keteranganBody, tanggalBody, file)
     }
+    suspend fun getRiwayat(token: String): Response<List<PresensiResponse>> {
+        return apiService.getRiwayatPresensi("Bearer $token")
+    }
+
 }

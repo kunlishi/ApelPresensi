@@ -7,6 +7,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -115,19 +117,33 @@ fun IzinScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(250.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = MaterialTheme.shapes.medium
-                    ),
+                    .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium),
                 contentAlignment = Alignment.Center
             ) {
                 if (selectedImageUri != null) {
-                    AsyncImage(
-                        model = selectedImageUri,
-                        contentDescription = "Preview Surat Izin",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
+                    // Cek apakah file adalah PDF (berdasarkan skema Uri atau ekstensi)
+                    val isPdf = context.contentResolver.getType(selectedImageUri!!) == "application/pdf"
+
+                    if (isPdf) {
+                        // Tampilkan ikon PDF jika yang dipilih adalah file PDF
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.Description,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text("File PDF Terpilih", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    } else {
+                        // Tampilkan gambar jika file adalah gambar
+                        AsyncImage(
+                            model = selectedImageUri,
+                            contentDescription = "Preview Bukti",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 } else {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
@@ -135,11 +151,8 @@ fun IzinScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.Gray
                         )
-                        TextButton(
-                            onClick = { launcher.launch("image/*") },
-                            enabled = uploadStatus !is UploadState.Loading
-                        ) {
-                            Text("PILIH GAMBAR")
+                        TextButton(onClick = { launcher.launch("*/*") }) { // Gunakan */* agar bisa pilih semua
+                            Text("PILIH FILE (GAMBAR/PDF)")
                         }
                     }
                 }
@@ -147,8 +160,8 @@ fun IzinScreen(
 
             // Tombol Ganti jika sudah ada foto
             if (selectedImageUri != null && uploadStatus !is UploadState.Loading) {
-                TextButton(onClick = { launcher.launch("image/*") }) {
-                    Text("Ganti Foto")
+                TextButton(onClick = { launcher.launch("*/*") }) {
+                    Text("Ganti File")
                 }
             }
 

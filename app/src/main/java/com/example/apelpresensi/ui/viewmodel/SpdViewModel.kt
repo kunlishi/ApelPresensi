@@ -26,7 +26,16 @@ class SpdViewModel(
     private val _scannerState = mutableStateOf<ScannerState>(ScannerState.Idle)
     val scannerState: State<ScannerState> = _scannerState
 
+    // Set untuk menyimpan NIM yang sudah berhasil di-scan dalam sesi ini
+    private val scannedNims = mutableSetOf<String>()
+
     fun processScannedNim(nim: String, tingkat: String, isTerlambat: Boolean = false) {
+        // 1. Validasi Lokal: Cek apakah NIM sudah ada di daftar sukses
+        if (scannedNims.contains(nim)) {
+            _scannerState.value = ScannerState.Error("Mahasiswa dengan NIM $nim sudah berhasil di-input sebelumnya!")
+            return
+        }
+
         val token = prefManager.getAuthToken() ?: return
         val tanggal = LocalDate.now().toString()
         val request = PresensiRequest(tanggal, tingkat, nim)
@@ -34,15 +43,19 @@ class SpdViewModel(
         viewModelScope.launch {
             _scannerState.value = ScannerState.Loading
             try {
+                // Menggunakan repository secara konsisten
                 val response = if (isTerlambat) {
-                    RetrofitClient.apiService.markTerlambat("Bearer $token", request)
+                    repository.markTerlambat(token, request)
                 } else {
-                    RetrofitClient.apiService.submitPresensi("Bearer $token", request)
+                    repository.recordPresensi(token, request)
                 }
 
                 if (response.isSuccessful) {
+                    // 2. Jika sukses, masukkan NIM ke dalam daftar pengecekan
+                    scannedNims.add(nim)
                     _scannerState.value = ScannerState.Success(response.body()!!)
                 } else {
+                    // Tangani jika server mengirimkan pesan "sudah presensi" (misal HTTP 400)
                     val errorMsg = response.errorBody()?.string() ?: "Gagal mencatat presensi"
                     _scannerState.value = ScannerState.Error(errorMsg)
                 }
@@ -53,6 +66,12 @@ class SpdViewModel(
     }
 
     fun resetScanner() {
+        _scannerState.value = ScannerState.Idle
+    }
+
+    // Fungsi untuk membersihkan daftar scan jika petugas berganti tingkat
+    fun clearScannedList() {
+        scannedNims.clear()
         _scannerState.value = ScannerState.Idle
     }
 }

@@ -13,23 +13,6 @@ interface ApiService {
     @POST("api/auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<AuthResponse>
 
-    @GET("api/mahasiswa/me")
-    suspend fun getMyProfile(
-        @Header("Authorization") token: String
-    ): Response<MahasiswaResponse>
-
-    @POST("api/spd/presensi")
-    suspend fun submitPresensi(
-        @Header("Authorization") token: String,
-        @Body request: PresensiRequest
-    ): Response<PresensiResponse>
-
-    @POST("api/spd/terlambat")
-    suspend fun markTerlambat(
-        @Header("Authorization") token: String,
-        @Body request: PresensiRequest
-    ): Response<PresensiResponse>
-
     @POST("api/admin/jadwal")
     suspend fun createJadwal(
         @Header("Authorization") token: String,
@@ -47,7 +30,23 @@ interface ApiService {
         @Path("id") id: Long
     ): Response<Void>
 
-    // Di dalam interface ApiService
+    @POST("api/spd/presensi")
+    suspend fun submitPresensi(
+        @Header("Authorization") token: String,
+        @Body request: PresensiRequest
+    ): Response<PresensiResponse>
+
+    @POST("api/spd/terlambat")
+    suspend fun markTerlambat(
+        @Header("Authorization") token: String,
+        @Body request: PresensiRequest
+    ): Response<PresensiResponse>
+
+    @GET("api/mahasiswa/me")
+    suspend fun getMyProfile(
+        @Header("Authorization") token: String
+    ): Response<MahasiswaResponse>
+
     @Multipart
     @POST("api/mahasiswa/izin")
     suspend fun submitIzin(
@@ -56,4 +55,9 @@ interface ApiService {
         @Part("tanggal") tanggal: RequestBody,
         @Part file: MultipartBody.Part
     ): Response<Void>
+
+    @GET("api/mahasiswa/riwayat")
+    suspend fun getRiwayatPresensi(
+        @Header("Authorization") token: String
+    ): Response<List<PresensiResponse>>
 }

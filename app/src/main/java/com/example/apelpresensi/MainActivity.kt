@@ -16,38 +16,33 @@ import com.example.apelpresensi.data.repository.PresensiRepository
 import com.example.apelpresensi.navigation.NavGraph
 import com.example.apelpresensi.ui.theme.ApelPresensiTheme
 import com.example.apelpresensi.ui.viewmodel.AuthViewModel
+import com.example.apelpresensi.data.repository.MahasiswaRepository // Pastikan import ini ada
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Inisialisasi Data Layer & Repositories
-        // Context 'this' aman digunakan di sini untuk SharedPreferences
         val prefManager = PreferenceManager(this)
         val apiService = RetrofitClient.apiService
 
         val authRepository = AuthRepository(apiService)
         val adminRepository = AdminRepository(apiService)
         val presensiRepository = PresensiRepository(apiService)
+        val mahasiswaRepository = MahasiswaRepository(apiService) // Tambahkan baris ini
 
-        // 2. Inisialisasi AuthViewModel
         val authViewModel = AuthViewModel(authRepository, prefManager)
 
         setContent {
             ApelPresensiTheme {
-                // Surface menyediakan background dasar sesuai tema (Light/Dark Mode)
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
+                Surface(modifier = Modifier.fillMaxSize()) {
                     val navController = rememberNavController()
 
-                    // Memasukkan semua dependensi ke NavGraph
                     NavGraph(
                         navController = navController,
                         authViewModel = authViewModel,
                         adminRepository = adminRepository,
                         presensiRepository = presensiRepository,
+                        mahasiswaRepository = mahasiswaRepository, // Masukkan ke sini
                         prefManager = prefManager
                     )
                 }
