@@ -11,25 +11,34 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.apelpresensi.ui.components.MainTopAppBar
+import com.example.apelpresensi.ui.components.ProfileDialog
+import com.example.apelpresensi.ui.viewmodel.AuthViewModel
 import com.example.apelpresensi.ui.viewmodel.MahasiswaViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun RiwayatPresensiScreen(
     viewModel: MahasiswaViewModel,
+    authViewModel: AuthViewModel,
     onBack: () -> Unit,
-    onLogout: () -> Unit
+    onNavigateToLogin: () -> Unit
 ) {
+    var showProfile by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+
     // Memicu pengambilan data riwayat saat layar pertama kali dibuka
     LaunchedEffect(Unit) {
         viewModel.fetchRiwayat()
+        authViewModel.fetchMe()
     }
 
     Scaffold(
         topBar = {
             MainTopAppBar(
                 title = "Riwayat Presensi",
-                onLogoutClick = onLogout,
-                onProfileClick = onBack
+                onBackClick = onBack,
+                onProfileClick = { showProfile = true }
             )
         }
     ) { padding ->
@@ -60,6 +69,19 @@ fun RiwayatPresensiScreen(
                     RiwayatCard(item = item)
                 }
             }
+        }
+        if (showProfile) {
+            ProfileDialog(
+                user = authViewModel.currentUser,
+                {scope.launch {
+                    showProfile = false
+                    kotlinx.coroutines.delay(150)
+                    authViewModel.logout()
+                    onNavigateToLogin()
+                }
+                },
+                onDismiss = { showProfile = false }
+            )
         }
     }
 }

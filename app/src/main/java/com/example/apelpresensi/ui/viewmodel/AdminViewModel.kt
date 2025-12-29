@@ -4,6 +4,7 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.apelpresensi.data.local.PreferenceManager
+import com.example.apelpresensi.data.remote.dto.IzinResponse
 import com.example.apelpresensi.data.remote.dto.JadwalRequest
 import com.example.apelpresensi.data.remote.dto.JadwalResponse
 import com.example.apelpresensi.data.remote.dto.PresensiResponse
@@ -17,6 +18,8 @@ class AdminViewModel(
     var jadwalList by mutableStateOf<List<JadwalResponse>>(emptyList())
     var isLoading by mutableStateOf(false)
     var errorMessage by mutableStateOf<String?>(null)
+
+    var izinList by mutableStateOf<List<IzinResponse>>(emptyList())
 
     fun fetchJadwal() {
         val token = prefManager.getAuthToken() ?: return
@@ -79,6 +82,27 @@ class AdminViewModel(
             } finally {
                 isLoading = false
             }
+        }
+    }
+    fun fetchIzin() {
+        val token = prefManager.getAuthToken() ?: return
+        viewModelScope.launch {
+            isLoading = true
+            try {
+                val response = repository.getAllIzin(token)
+                if (response.isSuccessful) izinList = response.body() ?: emptyList()
+            } catch (e: Exception) { errorMessage = e.message }
+            isLoading = false
+        }
+    }
+
+    fun validateIzin(id: Long, status: String) {
+        val token = prefManager.getAuthToken() ?: return
+        viewModelScope.launch {
+            try {
+                val response = repository.validateIzin(token, id, status)
+                if (response.isSuccessful) fetchIzin() // Refresh data
+            } catch (e: Exception) { errorMessage = e.message }
         }
     }
 }

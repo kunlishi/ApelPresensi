@@ -15,22 +15,21 @@ import com.example.apelpresensi.data.remote.dto.UserResponse
 @Composable
 fun MainTopAppBar(
     title: String,
-    onBackClick: (() -> Unit)? = null, // Parameter opsional untuk tombol kembali
+    onBackClick: (() -> Unit)? = null, // null berarti tidak tampil tombol back
     onProfileClick: () -> Unit
 ) {
     CenterAlignedTopAppBar(
         title = { Text(title, style = MaterialTheme.typography.titleMedium) },
         navigationIcon = {
-            // Tampilkan tombol back hanya jika callback disediakan
             if (onBackClick != null) {
                 IconButton(onClick = onBackClick) {
-                    Icon(imageVector = androidx.compose.material.icons.Icons.Default.ArrowBack, contentDescription = "Back")
+                    Icon(imageVector = androidx.compose.material.icons.Icons.Default.ArrowBack, contentDescription = "Kembali")
                 }
             }
         },
         actions = {
             IconButton(onClick = onProfileClick) {
-                Icon(imageVector = androidx.compose.material.icons.Icons.Default.AccountCircle, contentDescription = "Profile")
+                Icon(imageVector = androidx.compose.material.icons.Icons.Default.AccountCircle, contentDescription = "Profil")
             }
         }
     )

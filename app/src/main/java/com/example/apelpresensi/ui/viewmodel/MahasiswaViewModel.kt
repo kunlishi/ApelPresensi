@@ -3,7 +3,9 @@ package com.example.apelpresensi.ui.viewmodel
 import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.apelpresensi.data.local.PreferenceManager
@@ -14,6 +16,7 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -48,8 +51,20 @@ class MahasiswaViewModel(
     private val _uploadStatus = mutableStateOf<UploadState>(UploadState.Idle)
     val uploadStatus: State<UploadState> = _uploadStatus
 
+    // State Formulir Izin (Pindahkan ke sini agar tidak tereset)
+    var keterangan by mutableStateOf("")
+    var jenisIzin by mutableStateOf("IZIN")
+    var selectedUri by mutableStateOf<Uri?>(null)
+
     // Fungsi untuk mereset status upload (Dibutuhkan oleh IzinScreen)
     fun resetUploadStatus() {
+        _uploadStatus.value = UploadState.Idle
+    }
+
+    fun resetForm() {
+        keterangan = ""
+        jenisIzin = "IZIN"
+        selectedUri = null
         _uploadStatus.value = UploadState.Idle
     }
 
@@ -71,15 +86,16 @@ class MahasiswaViewModel(
         }
     }
 
-    fun uploadIzin(context: Context, uri: Uri, keterangan: String) {
+    fun uploadIzin(context: Context, uri: Uri, alasan: String, jenis: String) {
         val token = prefManager.getAuthToken() ?: return
         val tanggal = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 
         viewModelScope.launch {
             _uploadStatus.value = UploadState.Loading
             try {
+                val mimeType = context.contentResolver.getType(uri) ?: "image/*"
                 val filePart = prepareFilePart(context, "file", uri)
-                val response = repository.submitIzin(token, keterangan, tanggal, filePart)
+                val response = repository.submitIzin(token, alasan, tanggal, jenis, filePart)
 
                 if (response.isSuccessful) {
                     _uploadStatus.value = UploadState.Success("Pengajuan izin berhasil dikirim!")

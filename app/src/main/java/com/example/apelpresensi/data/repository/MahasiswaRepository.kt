@@ -14,14 +14,16 @@ class MahasiswaRepository(private val apiService: ApiService) {
     }
     suspend fun submitIzin(
         token: String,
-        keterangan: String,
+        alasan: String,
         tanggal: String,
+        jenis: String,
         file: MultipartBody.Part
     ): Response<Void> {
-        val keteranganBody = keterangan.toRequestBody("text/plain".toMediaTypeOrNull())
+        val alasanBody = alasan.toRequestBody("text/plain".toMediaTypeOrNull())
         val tanggalBody = tanggal.toRequestBody("text/plain".toMediaTypeOrNull())
+        val jenisBody = jenis.toRequestBody("text/plain".toMediaTypeOrNull())
 
-        return apiService.submitIzin("Bearer $token", keteranganBody, tanggalBody, file)
+        return apiService.submitIzin("Bearer $token", alasanBody, tanggalBody, jenisBody, file)
     }
     suspend fun getRiwayat(token: String): Response<List<PresensiResponse>> {
         return apiService.getRiwayatPresensi("Bearer $token")

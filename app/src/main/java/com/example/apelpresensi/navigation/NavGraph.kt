@@ -10,12 +10,25 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.apelpresensi.data.local.PreferenceManager
-import com.example.apelpresensi.data.repository.*
-import com.example.apelpresensi.ui.screens.auth.*
-import com.example.apelpresensi.ui.screens.mahasiswa.*
-import com.example.apelpresensi.ui.screens.spd.*
-import com.example.apelpresensi.ui.screens.admin.*
-import com.example.apelpresensi.ui.viewmodel.*
+import com.example.apelpresensi.data.repository.AdminRepository
+import com.example.apelpresensi.data.repository.MahasiswaRepository
+import com.example.apelpresensi.data.repository.PresensiRepository
+import com.example.apelpresensi.ui.screens.admin.AdminDashboard
+import com.example.apelpresensi.ui.screens.admin.IzinValidationScreen
+import com.example.apelpresensi.ui.screens.admin.RekapPresensiScreen
+import com.example.apelpresensi.ui.screens.auth.LoginScreen
+import com.example.apelpresensi.ui.screens.auth.RegisterScreen
+import com.example.apelpresensi.ui.screens.mahasiswa.IzinScreen
+import com.example.apelpresensi.ui.screens.mahasiswa.RiwayatPresensiScreen
+import com.example.apelpresensi.ui.screens.mahasiswa.StudentDashboard
+import com.example.apelpresensi.ui.screens.mahasiswa.StudentQrScreen
+import com.example.apelpresensi.ui.screens.spd.QrScannerScreen
+import com.example.apelpresensi.ui.screens.spd.SpdDashboard
+import com.example.apelpresensi.ui.viewmodel.AdminViewModel
+import com.example.apelpresensi.ui.viewmodel.AuthViewModel
+import com.example.apelpresensi.ui.viewmodel.MahasiswaState
+import com.example.apelpresensi.ui.viewmodel.MahasiswaViewModel
+import com.example.apelpresensi.ui.viewmodel.SpdViewModel
 
 @Composable
 fun NavGraph(
@@ -26,7 +39,7 @@ fun NavGraph(
     mahasiswaRepository: MahasiswaRepository,
     prefManager: PreferenceManager
 ) {
-    // 1. Deklarasi ViewModel di level atas NavGraph agar shared/dikenali semua rute
+    // 1. Inisialisasi Shared ViewModels di level NavGraph agar instance tetap terjaga di semua layar
     val adminViewModel: AdminViewModel = viewModel(
         factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -55,15 +68,19 @@ fun NavGraph(
         navController = navController,
         startDestination = Screen.Login.route
     ) {
-        // --- AUTH ---
+        // --- AUTHENTICATION ---
         composable(Screen.Login.route) {
             LoginScreen(
                 viewModel = authViewModel,
                 onLoginSuccess = { role ->
-                    when (role) {
-                        "ADMIN" -> navController.navigate(Screen.AdminDashboard.route) { popUpTo(0) }
-                        "SPD" -> navController.navigate(Screen.SpdDashboard.route) { popUpTo(0) }
-                        "MAHASISWA" -> navController.navigate(Screen.StudentDashboard.route) { popUpTo(0) }
+                    // Navigasi berdasarkan role
+                    val target = when (role) {
+                        "ADMIN" -> Screen.AdminDashboard.route
+                        "SPD" -> Screen.SpdDashboard.route
+                        else -> Screen.StudentDashboard.route
+                    }
+                    navController.navigate(target) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 },
                 onRegisterClick = { navController.navigate(Screen.Register.route) }
@@ -73,19 +90,23 @@ fun NavGraph(
         composable(Screen.Register.route) {
             RegisterScreen(
                 viewModel = authViewModel,
-                onRegisterSuccess = { navController.navigate(Screen.StudentDashboard.route) { popUpTo(0) } },
+                onRegisterSuccess = {
+                    navController.navigate(Screen.StudentDashboard.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                },
                 onBackToLogin = { navController.popBackStack() }
             )
         }
 
-        // --- ADMIN ---
+        // --- ROLE: ADMIN ---
         composable(Screen.AdminDashboard.route) {
             AdminDashboard(
-                adminViewModel = adminViewModel,
-                authViewModel = authViewModel, // Untuk ProfileDialog
+                viewModel = adminViewModel,
+                authViewModel = authViewModel,
                 onRekapClick = { id -> navController.navigate("rekap_presensi/$id") },
-                onLogout = {
-                    authViewModel.logout()
+                onIzinClick = { navController.navigate(Screen.IzinValidation.route) },
+                onNavigateToLogin = {
                     navController.navigate(Screen.Login.route) { popUpTo(0) }
                 }
             )
@@ -94,34 +115,45 @@ fun NavGraph(
         composable(
             route = Screen.RekapPresensi.route,
             arguments = listOf(navArgument("id") { type = NavType.LongType })
-        ) { backStackEntry ->
-            val id = backStackEntry.arguments?.getLong("id") ?: 0L
+        ) { entry ->
+            val id = entry.arguments?.getLong("id") ?: 0L
             RekapPresensiScreen(
                 scheduleId = id,
-                adminViewModel = adminViewModel,
+                viewModel = adminViewModel,
                 authViewModel = authViewModel,
-                onBack = { navController.popBackStack() }, // Aktifkan tombol back
-                onLogout = {
-                    authViewModel.logout()
+                onBack = { navController.popBackStack() },
+                onNavigateToLogin = {
+                    navController.navigate(Screen.Login.route) { popUpTo(0) }
+                }
+            )
+        }
+        composable(Screen.IzinValidation.route) {
+            IzinValidationScreen(
+                viewModel = adminViewModel,
+                authViewModel = authViewModel,
+                onBack = { navController.popBackStack() },
+                onNavigateToLogin = {
                     navController.navigate(Screen.Login.route) { popUpTo(0) }
                 }
             )
         }
 
-        // --- SPD ---
+        // --- ROLE: SPD ---
         composable(Screen.SpdDashboard.route) {
             SpdDashboard(
                 authViewModel = authViewModel,
                 onScanClick = { tingkat -> navController.navigate("qr_scanner/$tingkat") },
-                onLogout = {
-                    authViewModel.logout()
+                onNavigateToLogin = {
                     navController.navigate(Screen.Login.route) { popUpTo(0) }
                 }
             )
         }
 
-        composable("qr_scanner/{tingkat}") { backStackEntry ->
-            val tingkat = backStackEntry.arguments?.getString("tingkat") ?: "1"
+        composable(
+            route = "qr_scanner/{tingkat}",
+            arguments = listOf(navArgument("tingkat") { type = NavType.StringType })
+        ) { entry ->
+            val tingkat = entry.arguments?.getString("tingkat") ?: "1"
             QrScannerScreen(
                 tingkat = tingkat,
                 viewModel = spdViewModel,
@@ -129,7 +161,7 @@ fun NavGraph(
             )
         }
 
-        // --- MAHASISWA ---
+        // --- ROLE: MAHASISWA ---
         composable(Screen.StudentDashboard.route) {
             StudentDashboard(
                 viewModel = mhsViewModel,
@@ -140,8 +172,7 @@ fun NavGraph(
                 },
                 onIzinClick = { navController.navigate(Screen.Izin.route) },
                 onRiwayatClick = { navController.navigate(Screen.RiwayatPresensi.route) },
-                onLogout = {
-                    authViewModel.logout()
+                onNavigateToLogin = {
                     navController.navigate(Screen.Login.route) { popUpTo(0) }
                 }
             )
@@ -152,8 +183,7 @@ fun NavGraph(
                 viewModel = mhsViewModel,
                 authViewModel = authViewModel,
                 onBack = { navController.popBackStack() },
-                onLogout = {
-                    authViewModel.logout()
+                onNavigateToLogin = {
                     navController.navigate(Screen.Login.route) { popUpTo(0) }
                 }
             )
@@ -164,16 +194,21 @@ fun NavGraph(
                 viewModel = mhsViewModel,
                 authViewModel = authViewModel,
                 onBack = { navController.popBackStack() },
-                onLogout = {
-                    authViewModel.logout()
+                onNavigateToLogin = {
                     navController.navigate(Screen.Login.route) { popUpTo(0) }
                 }
             )
         }
 
-        composable("qr_screen/{nim}") { backStackEntry ->
-            val nim = backStackEntry.arguments?.getString("nim") ?: ""
-            StudentQrScreen(nim = nim, onBackClick = { navController.popBackStack() })
+        composable(
+            route = "qr_screen/{nim}",
+            arguments = listOf(navArgument("nim") { type = NavType.StringType })
+        ) { entry ->
+            val nim = entry.arguments?.getString("nim") ?: ""
+            StudentQrScreen(
+                nim = nim,
+                onBackClick = { navController.popBackStack() }
+            )
         }
     }
 }

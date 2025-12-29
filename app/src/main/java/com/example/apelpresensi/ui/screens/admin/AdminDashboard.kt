@@ -10,83 +10,189 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.core.*
+import androidx.compose.ui.draw.alpha
 import com.example.apelpresensi.ui.components.MainTopAppBar
+import com.example.apelpresensi.ui.components.ProfileDialog
 import com.example.apelpresensi.ui.viewmodel.AdminViewModel
 import com.example.apelpresensi.ui.viewmodel.AuthViewModel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 @Composable
 fun AdminDashboard(
-    adminViewModel: AdminViewModel,
+    viewModel: AdminViewModel,
     authViewModel: AuthViewModel,
-    onLogout: () -> Unit,
     onRekapClick: (Long) -> Unit,
-    onProfileClick: () -> Unit
+    onIzinClick: () -> Unit,
+    onNavigateToLogin: () -> Unit
 ) {
+    // 1. Tambahkan state baru khusus untuk dialog tambah jadwal
     var showProfileDialog by remember { mutableStateOf(false) }
+    var showAddJadwalDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var scheduleIdToDelete by remember { mutableStateOf<Long?>(null) }
+    val scope = rememberCoroutineScope()
+    val pendingCount = viewModel.izinList.count{ it.status == "PENDING"}
+    val infiniteTransition = rememberInfiniteTransition(label = "BlinkTransition")
+    val alphaAnim by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.3f, // Tingkat transparansi terendah
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "BlinkAlpha"
+    )
 
     LaunchedEffect(Unit) {
-        adminViewModel.fetchJadwal()
-        authViewModel.fetchMe() // Ambil data profil saat dashboard dibuka
-    }
-
-    LaunchedEffect(Unit) {
-        adminViewModel.fetchJadwal() // Muat data jadwal dari repository
+        viewModel.fetchJadwal()
+        viewModel.fetchIzin()
+        authViewModel.fetchMe()
     }
 
     Scaffold(
         topBar = {
             MainTopAppBar(
                 title = "Panel Admin",
-                onBackClick = null,
-                onProfileClick = onProfileClick
+                onProfileClick = { showProfileDialog = true }
             )
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showProfileDialog = true },
+                onClick = { showAddJadwalDialog = true },
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah Jadwal")
+                Icon(Icons.Default.Add, contentDescription = "Tambah")
+            }
+        },
+        // Menerapkan Kotak Izin di BottomBar agar tidak bertabrakan dengan FAB
+        bottomBar = {
+            Surface(
+                tonalElevation = 8.dp,
+                modifier = Modifier.navigationBarsPadding()
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp)
+                        .clickable { onIzinClick() },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Validasi Izin Mahasiswa", fontWeight = FontWeight.Bold)
+                            Text(
+                                text = if (pendingCount > 0) "Ada $pendingCount pengajuan baru" else "Tidak ada pengajuan baru",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
+                        // 2. Terapkan Animasi pada Badge
+                        if (pendingCount > 0) {
+                            Surface(
+                                color = Color.Red,
+                                shape = androidx.compose.foundation.shape.CircleShape,
+                                // Terapkan alphaAnim di sini agar berkedip
+                                modifier = Modifier.alpha(alphaAnim)
+                            ) {
+                                Text(
+                                    text = pendingCount.toString(),
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-        ) {
-            items(adminViewModel.jadwalList) { jadwal ->
-                ListItem(
-                    modifier = Modifier.clickable { onRekapClick(jadwal.id) }, // Tambahkan onRekapClick di parameter AdminDashboard
-                    headlineContent = { Text("Tingkat ${jadwal.tingkat} - ${jadwal.tanggalApel}") },
-                    supportingContent = { Text("Jam: ${jadwal.waktuApel} | ${jadwal.keterangan ?: ""}") },
-                    trailingContent = {
-                        // Tombol Hapus Jadwal
-                        IconButton(onClick = { adminViewModel.deleteJadwal(jadwal.id) }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = Color.Red)
+        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            Text(
+                text = "Daftar Jadwal Apel",
+                modifier = Modifier.padding(16.dp),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(viewModel.jadwalList) { jadwal ->
+                    ListItem(
+                        modifier = Modifier.clickable { onRekapClick(jadwal.id) },
+                        headlineContent = { Text("Tingkat ${jadwal.tingkat} - ${jadwal.tanggalApel}") },
+                        supportingContent = { Text("Jam: ${jadwal.waktuApel}") },
+                        trailingContent = {
+                            IconButton(onClick = { viewModel.deleteJadwal(jadwal.id) }) {
+                                Icon(Icons.Default.Delete, "Hapus", tint = Color.Red)
+                            }
                         }
-                    },
-                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background)
-                )
-                HorizontalDivider()
+                    )
+                    HorizontalDivider()
+                }
             }
         }
+        if (showDeleteConfirmation) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirmation = false },
+                title = { Text("Konfirmasi Hapus") },
+                text = {
+                    Text("Apakah Anda yakin ingin menghapus jadwal ini? " +
+                            "PERINGATAN: Semua data presensi mahasiswa pada jadwal ini akan ikut terhapus selamanya.")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scheduleIdToDelete?.let { viewModel.deleteJadwal(it) }
+                            showDeleteConfirmation = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) { Text("Hapus") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteConfirmation = false }) { Text("Batal") }
+                }
+            )
+        }
 
+        // Dialog Profil
         if (showProfileDialog) {
+            ProfileDialog(
+                user = authViewModel.currentUser,
+                onLogout = {scope.launch {
+                    showProfileDialog = false // 1. Hilangkan jendela profil
+                    kotlinx.coroutines.delay(150) // 2. Tunggu sebentar agar animasi dismissal terlihat
+                    authViewModel.logout() // 3. Hapus sesi
+                    onNavigateToLogin() // 4. Navigasi balik ke Login
+                }
+                },
+                onDismiss = { showProfileDialog = false }
+            )
+        }
+
+        if (showAddJadwalDialog) {
             AddJadwalDialog(
-                onDismiss = { showProfileDialog = false },
-                onConfirm = { tgl, jam, tkt, ket ->
-                    adminViewModel.addJadwal(tgl, jam, tkt, ket) // Simpan via ViewModel
-                    showProfileDialog = false
+                onDismiss = { showAddJadwalDialog = false },
+                onConfirm = { tanggal, waktu, tingkat, ket ->
+                    viewModel.addJadwal(tanggal, waktu, tingkat, ket)
+                    showAddJadwalDialog = false
                 }
             )
         }

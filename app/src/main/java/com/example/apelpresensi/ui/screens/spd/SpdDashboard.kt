@@ -7,14 +7,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.apelpresensi.ui.components.MainTopAppBar
+import com.example.apelpresensi.ui.components.ProfileDialog
+import com.example.apelpresensi.ui.viewmodel.AuthViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun SpdDashboard(
+    authViewModel: AuthViewModel, // Tambahkan ini
     onScanClick: (String) -> Unit,
-    onLogout: () -> Unit,
+    onNavigateToLogin: () -> Unit
 ) {
     var selectedTingkat by remember { mutableStateOf("1") }
     val tingkatOptions = listOf("1", "2", "3", "4")
+    val scope = rememberCoroutineScope()
     var showProfile by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -64,6 +69,19 @@ fun SpdDashboard(
             ) {
                 Text("BUKA SCANNER QR")
             }
+        }
+        if (showProfile) {
+            ProfileDialog(
+                user = authViewModel.currentUser,
+                {scope.launch {
+                    showProfile = false
+                    kotlinx.coroutines.delay(150)
+                    authViewModel.logout()
+                    onNavigateToLogin()
+                }
+                },
+                onDismiss = { showProfile = false }
+            )
         }
     }
 }

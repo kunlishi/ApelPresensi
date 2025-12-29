@@ -8,23 +8,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.apelpresensi.ui.components.MainTopAppBar
+import com.example.apelpresensi.ui.components.ProfileDialog
+import com.example.apelpresensi.ui.viewmodel.AuthViewModel
 import com.example.apelpresensi.ui.viewmodel.MahasiswaState
 import com.example.apelpresensi.ui.viewmodel.MahasiswaViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun StudentDashboard(
     viewModel: MahasiswaViewModel,
+    authViewModel: AuthViewModel, // Tambahkan ini
     onShowQrClick: () -> Unit,
     onIzinClick: () -> Unit,
     onRiwayatClick: () -> Unit,
-    onLogout: () -> Unit,
+    onNavigateToLogin: () -> Unit
 ) {
     val state by viewModel.profileState
+    val scope = rememberCoroutineScope()
     var showProfile by remember { mutableStateOf(false) }
 
     // Ambil data profil saat layar dibuka
     LaunchedEffect(Unit) {
         viewModel.fetchProfile()
+        authViewModel.fetchMe()
     }
 
     Scaffold(
@@ -123,6 +129,19 @@ fun StudentDashboard(
                     }
                 }
             }
+        }
+        if (showProfile) {
+            ProfileDialog(
+                user = authViewModel.currentUser,
+                {scope.launch {
+                    showProfile = false
+                    kotlinx.coroutines.delay(150)
+                    authViewModel.logout()
+                    onNavigateToLogin()
+                }
+                },
+                onDismiss = { showProfile = false }
+            )
         }
     }
 }

@@ -9,5 +9,5 @@ sealed class Screen(val route: String) {
     object Izin: Screen("izin")
     object RiwayatPresensi: Screen("riwayat_presensi")
     object RekapPresensi: Screen("rekap_presensi/{id}")
-
+    object IzinValidation : Screen("izin_validation")
 }

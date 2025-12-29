@@ -41,6 +41,18 @@ interface ApiService {
         @Path("scheduleId") scheduleId: Long
     ): Response<List<PresensiResponse>>
 
+    @GET("api/admin/izin")
+    suspend fun getAllIzin(
+        @Header("Authorization") token: String
+    ): Response<List<IzinResponse>> // IzinResponse sudah ada di MahasiswaDto.kt
+
+    @PUT("api/admin/izin/{id}/validate")
+    suspend fun validateIzin(
+        @Header("Authorization") token: String,
+        @Path("id") id: Long,
+        @Query("status") status: String // "APPROVED" atau "REJECTED"
+    ): Response<Unit>
+
     @POST("api/spd/presensi")
     suspend fun submitPresensi(
         @Header("Authorization") token: String,
@@ -62,8 +74,9 @@ interface ApiService {
     @POST("api/mahasiswa/izin")
     suspend fun submitIzin(
         @Header("Authorization") token: String,
-        @Part("keterangan") keterangan: RequestBody,
+        @Part("alasan") alasan: RequestBody, // Ubah dari 'keterangan' ke 'alasan'
         @Part("tanggal") tanggal: RequestBody,
+        @Part("jenis") jenis: RequestBody,   // Tambahkan parameter jenis
         @Part file: MultipartBody.Part
     ): Response<Void>
 
