@@ -7,4 +7,7 @@ sealed class Screen(val route: String) {
     object SpdDashboard : Screen("spd_dashboard")
     object StudentDashboard : Screen("student_dashboard")
     object Izin: Screen("izin")
+    object RiwayatPresensi: Screen("riwayat_presensi")
+    object RekapPresensi: Screen("rekap_presensi/{id}")
+
 }

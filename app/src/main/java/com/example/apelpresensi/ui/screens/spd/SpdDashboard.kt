@@ -12,17 +12,17 @@ import com.example.apelpresensi.ui.components.MainTopAppBar
 fun SpdDashboard(
     onScanClick: (String) -> Unit,
     onLogout: () -> Unit,
-    onProfileClick: () -> Unit // Tambahkan parameter ini
 ) {
     var selectedTingkat by remember { mutableStateOf("1") }
     val tingkatOptions = listOf("1", "2", "3", "4")
+    var showProfile by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             MainTopAppBar(
                 title = "Petugas SPD",
-                onLogoutClick = onLogout,
-                onProfileClick = onProfileClick
+                onBackClick = null,
+                onProfileClick = { showProfile = true }
             )
         }
     ) { padding ->

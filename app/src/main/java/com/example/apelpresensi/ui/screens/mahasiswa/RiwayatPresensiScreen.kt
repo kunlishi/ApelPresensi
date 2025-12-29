@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -18,22 +19,9 @@ fun RiwayatPresensiScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit
 ) {
+    // Memicu pengambilan data riwayat saat layar pertama kali dibuka
     LaunchedEffect(Unit) {
         viewModel.fetchRiwayat()
-    }
-    fun formatJam(waktuRaw: String): String {
-        return try {
-            // Jika formatnya "2025-12-28 07:30:00" atau "2025-12-28T07:30:00"
-            if (waktuRaw.contains(" ") || waktuRaw.contains("T")) {
-                val pemisah = if (waktuRaw.contains("T")) "T" else " "
-                waktuRaw.split(pemisah)[1].substring(0, 5) // Ambil HH:mm
-            } else {
-                // Jika sudah format "07:30:00", ambil 5 karakter depan
-                waktuRaw.substring(0, 5)
-            }
-        } catch (e: Exception) {
-            waktuRaw // Kembalikan apa adanya jika gagal parsing
-        }
     }
 
     Scaffold(
@@ -45,52 +33,117 @@ fun RiwayatPresensiScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(viewModel.riwayatList.value) { item ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text(text = item.tanggal, fontWeight = FontWeight.Bold)
-                            Text(text = "Waktu: ${formatJam(item.waktuPresensi)}",
-                                style = MaterialTheme.typography.bodySmall)
-                        }
+        val riwayat = viewModel.riwayatList.value
 
-                        // Badge Status
-                        val statusColor = when (item.status) {
-                            "HADIR" -> Color(0xFF2E7D32)
-                            "TERLAMBAT" -> Color(0xFFE65100)
-                            "IZIN" -> Color(0xFF1976D2)
-                            else -> Color.Gray
-                        }
-
-                        Surface(
-                            color = statusColor,
-                            shape = MaterialTheme.shapes.small
-                        ) {
-                            Text(
-                                text = item.status,
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        }
-                    }
+        if (riwayat.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Belum ada riwayat presensi.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.Gray
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(riwayat) { item ->
+                    RiwayatCard(item = item)
                 }
             }
         }
+    }
+}
+
+@Composable
+fun RiwayatCard(item: com.example.apelpresensi.data.remote.dto.PresensiResponse) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.tanggal, // Format: YYYY-MM-DD dari DTO
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Waktu: ${formatJam(item.waktuPresensi)}", // Menggunakan helper format jam
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Tingkat: ${item.tingkat}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+
+            // Status Badge
+            StatusBadge(status = item.status)
+        }
+    }
+}
+
+@Composable
+fun StatusBadge(status: String) {
+    val backgroundColor = when (status.uppercase()) {
+        "HADIR" -> Color(0xFF4CAF50) // Hijau
+        "TERLAMBAT" -> Color(0xFFF44336) // Merah
+        "IZIN" -> Color(0xFF2196F3) // Biru
+        else -> Color.Gray
+    }
+
+    Surface(
+        color = backgroundColor,
+        shape = MaterialTheme.shapes.small
+    ) {
+        Text(
+            text = status,
+            color = Color.White,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+/**
+ * Helper untuk mengambil jam saja (HH:mm) dari string waktuPresensi.
+ * Menangani format ISO (2025-12-28T07:00:00) atau format waktu saja (07:00:00).
+ */
+fun formatJam(waktuRaw: String): String {
+    return try {
+        if (waktuRaw.contains("T")) {
+            // Format ISO: ambil bagian setelah 'T' lalu ambil 5 karakter pertama (HH:mm)
+            waktuRaw.split("T")[1].substring(0, 5)
+        } else if (waktuRaw.contains(" ")) {
+            // Format "YYYY-MM-DD HH:mm:ss"
+            waktuRaw.split(" ")[1].substring(0, 5)
+        } else {
+            // Format "HH:mm:ss" langsung
+            waktuRaw.substring(0, 5)
+        }
+    } catch (e: Exception) {
+        waktuRaw // Kembalikan string asli jika gagal parsing
     }
 }

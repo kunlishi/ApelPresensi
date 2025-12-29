@@ -16,10 +16,11 @@ fun StudentDashboard(
     viewModel: MahasiswaViewModel,
     onShowQrClick: () -> Unit,
     onIzinClick: () -> Unit,
+    onRiwayatClick: () -> Unit,
     onLogout: () -> Unit,
-    onProfileClick: () -> Unit // Tambahkan callback untuk profil
 ) {
     val state by viewModel.profileState
+    var showProfile by remember { mutableStateOf(false) }
 
     // Ambil data profil saat layar dibuka
     LaunchedEffect(Unit) {
@@ -30,8 +31,8 @@ fun StudentDashboard(
         topBar = {
             MainTopAppBar(
                 title = "Dashboard Mahasiswa",
-                onLogoutClick = onLogout,
-                onProfileClick = onProfileClick
+                onBackClick = null,
+                onProfileClick = { showProfile = true }
             )
         }
     ) { padding ->
@@ -87,10 +88,24 @@ fun StudentDashboard(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = onRiwayatClick, // Tambahkan callback ini ke parameter StudentDashboard
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .padding(top = 8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+                    ) {
+                        Text("LIHAT RIWAYAT PRESENSI")
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Button(
                         onClick = onIzinClick,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.secondary
                         )

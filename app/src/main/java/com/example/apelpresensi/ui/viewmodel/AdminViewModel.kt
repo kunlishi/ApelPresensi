@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.apelpresensi.data.local.PreferenceManager
 import com.example.apelpresensi.data.remote.dto.JadwalRequest
 import com.example.apelpresensi.data.remote.dto.JadwalResponse
+import com.example.apelpresensi.data.remote.dto.PresensiResponse
 import com.example.apelpresensi.data.repository.AdminRepository
 import kotlinx.coroutines.launch
 
@@ -47,10 +48,36 @@ class AdminViewModel(
                 if (response.isSuccessful) {
                     fetchJadwal() // Refresh daftar setelah menghapus
                 } else {
-                    errorMessage = "Gagal menghapus jadwal"
+                    errorMessage = if (response.code() == 500 || response.code() == 409) {
+                        "Jadwal tidak bisa dihapus karena sudah memiliki data presensi mahasiswa."
+                    } else {
+                        "Gagal menghapus jadwal: ${response.message()}"
+                    }
                 }
             } catch (e: Exception) {
                 errorMessage = e.message
+            }
+        }
+    }
+
+    private val _rekapList = mutableStateOf<List<PresensiResponse>>(emptyList())
+    val rekapList: State<List<PresensiResponse>> = _rekapList
+
+    fun fetchRekap(scheduleId: Long) {
+        val token = prefManager.getAuthToken() ?: return
+        viewModelScope.launch {
+            try {
+                isLoading = true
+                val response = repository.getRekap(token, scheduleId)
+                if (response.isSuccessful) {
+                    _rekapList.value = response.body() ?: emptyList()
+                } else {
+                    errorMessage = "Gagal memuat rekap: ${response.message()}"
+                }
+            } catch (e: Exception) {
+                errorMessage = "Koneksi gagal: ${e.message}"
+            } finally {
+                isLoading = false
             }
         }
     }

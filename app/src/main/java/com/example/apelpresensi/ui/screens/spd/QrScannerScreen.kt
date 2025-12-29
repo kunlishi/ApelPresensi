@@ -164,12 +164,9 @@ fun CameraPreview(onQrScanned: (String) -> Unit) {
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     val previewView = remember { PreviewView(context) }
 
-    AndroidView(
-        factory = { previewView },
-        modifier = Modifier.fillMaxSize()
-    ) {
+    // Gunakan LaunchedEffect agar binding hanya terjadi SEKALI saat layar dibuka
+    LaunchedEffect(Unit) {
         val cameraProviderFuture = androidx.camera.lifecycle.ProcessCameraProvider.getInstance(context)
-
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
 
@@ -198,6 +195,12 @@ fun CameraPreview(onQrScanned: (String) -> Unit) {
             }
         }, ContextCompat.getMainExecutor(context))
     }
+
+    // AndroidView sekarang hanya bertanggung jawab menampilkan View-nya saja
+    AndroidView(
+        factory = { previewView },
+        modifier = Modifier.fillMaxSize()
+    )
 }
 
 @androidx.annotation.OptIn(ExperimentalGetImage::class)

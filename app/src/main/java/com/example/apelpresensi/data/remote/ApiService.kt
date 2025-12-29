@@ -13,6 +13,11 @@ interface ApiService {
     @POST("api/auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<AuthResponse>
 
+    @GET("api/user/me")
+    suspend fun getCurrentUser(
+        @Header("Authorization") token: String
+    ): Response<UserResponse>
+
     @POST("api/admin/jadwal")
     suspend fun createJadwal(
         @Header("Authorization") token: String,
@@ -29,6 +34,12 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Path("id") id: Long
     ): Response<Void>
+
+    @GET("api/admin/presensi/rekap/{scheduleId}")
+    suspend fun getRekapByJadwal(
+        @Header("Authorization") token: String,
+        @Path("scheduleId") scheduleId: Long
+    ): Response<List<PresensiResponse>>
 
     @POST("api/spd/presensi")
     suspend fun submitPresensi(

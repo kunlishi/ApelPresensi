@@ -1,13 +1,16 @@
 package com.example.apelpresensi.ui.viewmodel
 
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.apelpresensi.data.local.PreferenceManager
 import com.example.apelpresensi.data.remote.dto.AuthResponse
 import com.example.apelpresensi.data.remote.dto.LoginRequest
 import com.example.apelpresensi.data.remote.dto.RegisterRequest
+import com.example.apelpresensi.data.remote.dto.UserResponse
 import com.example.apelpresensi.data.repository.AuthRepository
 import kotlinx.coroutines.launch
 
@@ -25,6 +28,8 @@ class AuthViewModel(
 ) : ViewModel() {
     private val _authState = mutableStateOf<AuthState>(AuthState.Idle)
     val authState: State<AuthState> = _authState
+    var currentUser by mutableStateOf<UserResponse?>(null)
+        private set
 
     fun login(username: String, password: String) {
         viewModelScope.launch {
@@ -61,6 +66,20 @@ class AuthViewModel(
                 }
             } catch (e: Exception) {
                 _authState.value = AuthState.Error("Kesalahan jaringan: ${e.message}")
+            }
+        }
+    }
+
+    fun fetchMe() {
+        val token = prefManager.getAuthToken() ?: return
+        viewModelScope.launch {
+            try {
+                val response = repository.getCurrentUser(token)
+                if (response.isSuccessful) {
+                    currentUser = response.body()
+                }
+            } catch (e: Exception) {
+                // Tangani error jika diperlukan
             }
         }
     }

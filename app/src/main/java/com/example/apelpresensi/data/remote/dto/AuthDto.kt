@@ -20,3 +20,11 @@ data class RegisterRequest(
     val kelas: String,
     val tingkat: String
 )
+
+// Response untuk data profil user
+data class UserResponse(
+    val id: Long,
+    val username: String,
+    val nama: String,
+    val role: String
+)
