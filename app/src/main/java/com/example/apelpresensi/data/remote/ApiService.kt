@@ -41,16 +41,23 @@ interface ApiService {
         @Path("scheduleId") scheduleId: Long
     ): Response<List<PresensiResponse>>
 
+    @GET("api/admin/rekap/{scheduleId}")
+    suspend fun getRekapPresensi(
+        @Header("Authorization") token: String,
+        @Path("scheduleId") scheduleId: Long
+    ): Response<List<PresensiDetailResponse>>
+
     @GET("api/admin/izin")
     suspend fun getAllIzin(
         @Header("Authorization") token: String
-    ): Response<List<IzinResponse>> // IzinResponse sudah ada di MahasiswaDto.kt
+    ): Response<List<IzinResponse>>
 
-    @PUT("api/admin/izin/{id}/validate")
+    @PUT("api/admin/izin/{id}") // Hapus /validate
     suspend fun validateIzin(
         @Header("Authorization") token: String,
         @Path("id") id: Long,
-        @Query("status") status: String // "APPROVED" atau "REJECTED"
+        @Query("status") status: String, // MENUNGGU, DITERIMA, DITOLAK
+        @Query("catatanAdmin") catatanAdmin: String?
     ): Response<Unit>
 
     @POST("api/spd/presensi")
@@ -65,6 +72,21 @@ interface ApiService {
         @Body request: PresensiRequest
     ): Response<PresensiResponse>
 
+    @POST("api/spd/scan")
+    suspend fun scanQR(
+        @Header("Authorization") token: String,
+        @Query("nim") nim: String,
+        @Query("scheduleId") scheduleId: Long
+    ): Response<ScanResponse>
+
+    @POST("api/spd/confirm")
+    suspend fun confirmPresensi(
+        @Header("Authorization") token: String,
+        @Query("nim") nim: String,
+        @Query("scheduleId") scheduleId: Long,
+        @Query("status") status: String // "HADIR" atau "TERLAMBAT"
+    ): Response<String>
+
     @GET("api/mahasiswa/me")
     suspend fun getMyProfile(
         @Header("Authorization") token: String
@@ -74,14 +96,20 @@ interface ApiService {
     @POST("api/mahasiswa/izin")
     suspend fun submitIzin(
         @Header("Authorization") token: String,
-        @Part("alasan") alasan: RequestBody, // Ubah dari 'keterangan' ke 'alasan'
         @Part("tanggal") tanggal: RequestBody,
-        @Part("jenis") jenis: RequestBody,   // Tambahkan parameter jenis
-        @Part file: MultipartBody.Part
-    ): Response<Void>
+        @Part("tingkat") tingkat: RequestBody,
+        @Part("jenis") jenis: RequestBody,           // Mengirim "IZIN" atau "SAKIT"
+        @Part("keterangan") keterangan: RequestBody, // Mengirim deskripsi detail
+        @Part bukti: MultipartBody.Part              // Nama part harus 'bukti'
+    ): Response<Long>
 
     @GET("api/mahasiswa/riwayat")
     suspend fun getRiwayatPresensi(
         @Header("Authorization") token: String
     ): Response<List<PresensiResponse>>
+
+    @GET("api/mahasiswa/izin/me")
+    suspend fun getMyIzin(
+        @Header("Authorization") token: String
+    ): Response<List<IzinResponse>>
 }

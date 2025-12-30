@@ -19,6 +19,7 @@ import com.example.apelpresensi.ui.screens.admin.RekapPresensiScreen
 import com.example.apelpresensi.ui.screens.auth.LoginScreen
 import com.example.apelpresensi.ui.screens.auth.RegisterScreen
 import com.example.apelpresensi.ui.screens.mahasiswa.IzinScreen
+import com.example.apelpresensi.ui.screens.mahasiswa.RiwayatIzinScreen
 import com.example.apelpresensi.ui.screens.mahasiswa.RiwayatPresensiScreen
 import com.example.apelpresensi.ui.screens.mahasiswa.StudentDashboard
 import com.example.apelpresensi.ui.screens.mahasiswa.StudentQrScreen
@@ -149,14 +150,11 @@ fun NavGraph(
             )
         }
 
-        composable(
-            route = "qr_scanner/{tingkat}",
-            arguments = listOf(navArgument("tingkat") { type = NavType.StringType })
-        ) { entry ->
-            val tingkat = entry.arguments?.getString("tingkat") ?: "1"
+        composable("qr_scanner/{scheduleId}") { backStackEntry ->
+            val scheduleId = backStackEntry.arguments?.getString("scheduleId")?.toLong() ?: 0L
             QrScannerScreen(
-                tingkat = tingkat,
                 viewModel = spdViewModel,
+                scheduleId = scheduleId,
                 onBack = { navController.popBackStack() }
             )
         }
@@ -168,10 +166,10 @@ fun NavGraph(
                 authViewModel = authViewModel,
                 onShowQrClick = {
                     val nim = (mhsViewModel.profileState.value as? MahasiswaState.Success)?.data?.nim ?: ""
-                    navController.navigate("qr_screen/$nim")
-                },
+                    navController.navigate("qr_screen/$nim") },
                 onIzinClick = { navController.navigate(Screen.Izin.route) },
                 onRiwayatClick = { navController.navigate(Screen.RiwayatPresensi.route) },
+                onRiwayatIzinClick = { navController.navigate(Screen.RiwayatIzin.route) }, // Tambahkan ini
                 onNavigateToLogin = {
                     navController.navigate(Screen.Login.route) { popUpTo(0) }
                 }
@@ -191,6 +189,17 @@ fun NavGraph(
 
         composable(Screen.RiwayatPresensi.route) {
             RiwayatPresensiScreen(
+                viewModel = mhsViewModel,
+                authViewModel = authViewModel,
+                onBack = { navController.popBackStack() },
+                onNavigateToLogin = {
+                    navController.navigate(Screen.Login.route) { popUpTo(0) }
+                }
+            )
+        }
+
+        composable(Screen.RiwayatIzin.route) {
+            RiwayatIzinScreen(
                 viewModel = mhsViewModel,
                 authViewModel = authViewModel,
                 onBack = { navController.popBackStack() },

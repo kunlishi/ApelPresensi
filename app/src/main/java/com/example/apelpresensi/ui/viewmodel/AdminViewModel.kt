@@ -7,6 +7,7 @@ import com.example.apelpresensi.data.local.PreferenceManager
 import com.example.apelpresensi.data.remote.dto.IzinResponse
 import com.example.apelpresensi.data.remote.dto.JadwalRequest
 import com.example.apelpresensi.data.remote.dto.JadwalResponse
+import com.example.apelpresensi.data.remote.dto.PresensiDetailResponse
 import com.example.apelpresensi.data.remote.dto.PresensiResponse
 import com.example.apelpresensi.data.repository.AdminRepository
 import kotlinx.coroutines.launch
@@ -63,22 +64,20 @@ class AdminViewModel(
         }
     }
 
-    private val _rekapList = mutableStateOf<List<PresensiResponse>>(emptyList())
-    val rekapList: State<List<PresensiResponse>> = _rekapList
+    private val _rekapList = mutableStateOf<List<PresensiDetailResponse>>(emptyList())
+    val rekapList: State<List<PresensiDetailResponse>> = _rekapList
 
     fun fetchRekap(scheduleId: Long) {
         val token = prefManager.getAuthToken() ?: return
         viewModelScope.launch {
+            isLoading = true
             try {
-                isLoading = true
-                val response = repository.getRekap(token, scheduleId)
+                val response = repository.getRekapPresensi(token, scheduleId)
                 if (response.isSuccessful) {
                     _rekapList.value = response.body() ?: emptyList()
-                } else {
-                    errorMessage = "Gagal memuat rekap: ${response.message()}"
                 }
             } catch (e: Exception) {
-                errorMessage = "Koneksi gagal: ${e.message}"
+                errorMessage = e.message
             } finally {
                 isLoading = false
             }
@@ -96,11 +95,11 @@ class AdminViewModel(
         }
     }
 
-    fun validateIzin(id: Long, status: String) {
+    fun validateIzin(id: Long, status: String, catatanAdmin: String) {
         val token = prefManager.getAuthToken() ?: return
         viewModelScope.launch {
             try {
-                val response = repository.validateIzin(token, id, status)
+                val response = repository.validateIzin(token, id, status, catatanAdmin)
                 if (response.isSuccessful) fetchIzin() // Refresh data
             } catch (e: Exception) { errorMessage = e.message }
         }

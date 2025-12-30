@@ -2,7 +2,7 @@ package com.example.apelpresensi.util
 
 object Constants {
     // Gunakan 10.0.2.2 untuk mengakses localhost dari emulator Android
-    const val BASE_URL = "https://unquavering-mackenzie-hiddenly.ngrok-free.dev/"
+    const val BASE_URL = "http://192.168.1.9:8080/"
     const val PREFS_NAME = "presensi_prefs"
     const val KEY_TOKEN = "jwt_token"
     const val KEY_ROLE = "user_role"

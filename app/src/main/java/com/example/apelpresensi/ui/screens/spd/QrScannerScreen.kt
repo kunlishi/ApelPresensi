@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -29,7 +30,7 @@ import java.util.concurrent.Executors
 
 @Composable
 fun QrScannerScreen(
-    tingkat: String,
+    scheduleId: Long, // Ganti tingkat menjadi scheduleId sesuai endpoint backend
     viewModel: SpdViewModel,
     onBack: () -> Unit
 ) {
@@ -51,7 +52,8 @@ fun QrScannerScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (hasCameraPermission) {
-            QrScannerContent(tingkat, viewModel, onBack)
+            // TERHUBUNG: Gunakan scheduleId
+            QrScannerContent(scheduleId, viewModel, onBack)
         } else {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -65,11 +67,11 @@ fun QrScannerScreen(
             }
         }
 
-        // Tombol Kembali Manual (Floating)
         IconButton(
             onClick = onBack,
             modifier = Modifier
                 .padding(16.dp)
+                .statusBarsPadding()
                 .align(Alignment.TopStart)
                 .background(Color.Black.copy(alpha = 0.5f), CircleShape)
         ) {
@@ -78,6 +80,103 @@ fun QrScannerScreen(
     }
 }
 
+@Composable
+fun QrScannerContent(
+    scheduleId: Long,
+    viewModel: SpdViewModel,
+    onBack: () -> Unit
+) {
+    val scannerState by viewModel.scannerState
+    var showConfirmDialog by remember { mutableStateOf(false) }
+
+    // Memantau state untuk memicu Dialog Konfirmasi
+    LaunchedEffect(scannerState) {
+        if (scannerState is ScannerState.NeedConfirmation) {
+            showConfirmDialog = true
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        CameraPreview(onQrScanned = { nim ->
+            if (scannerState is ScannerState.Idle) {
+                // SINKRONISASI: Panggil scan dengan scheduleId
+                viewModel.scanQR(nim, scheduleId)
+            }
+        })
+
+        // Overlay Hasil Scan
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 50.dp, start = 24.dp, end = 24.dp)
+        ) {
+            when (scannerState) {
+                is ScannerState.Loading -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
+
+                is ScannerState.Success -> {
+                    val data = (scannerState as ScannerState.Success).data
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                        elevation = CardDefaults.cardElevation(8.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("✅ Berhasil: ${data.nama}", fontWeight = FontWeight.Bold)
+                            Text("Status: ${data.status}", style = MaterialTheme.typography.bodySmall)
+                            Spacer(Modifier.height(8.dp))
+                            Button(onClick = { viewModel.resetScanner() }, Modifier.fillMaxWidth()) {
+                                Text("SCAN BERIKUTNYA")
+                            }
+                        }
+                    }
+                }
+
+                is ScannerState.Error -> {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("❌ Gagal!", fontWeight = FontWeight.Bold)
+                            Text((scannerState as ScannerState.Error).message)
+                            Button(onClick = { viewModel.resetScanner() }, Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                                Text("COBA LAGI")
+                            }
+                        }
+                    }
+                }
+                else -> {}
+            }
+        }
+
+        // DIALOG KONFIRMASI (±5 MENIT)
+        if (showConfirmDialog && scannerState is ScannerState.NeedConfirmation) {
+            val data = (scannerState as ScannerState.NeedConfirmation).data
+            AlertDialog(
+                onDismissRequest = {
+                    showConfirmDialog = false
+                    viewModel.resetScanner()
+                },
+                title = { Text("Konfirmasi SPD") },
+                text = { Text("Mahasiswa ${data.nama} berada di rentang waktu transisi. Tentukan statusnya:") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.confirmManual(data.nim!!, scheduleId, "HADIR")
+                            showConfirmDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                    ) { Text("Hadir") }
+                },
+                dismissButton = {
+                    Button(
+                        onClick = {
+                            viewModel.confirmManual(data.nim!!, scheduleId, "TERLAMBAT")
+                            showConfirmDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                    ) { Text("Terlambat") }
+                }
+            )
+        }
+    }
+}
 @Composable
 fun QrScannerContent(
     tingkat: String,

@@ -19,7 +19,7 @@ fun ProfileDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (user != null) {
-                    Text("Nama: ${user.nama}")
+                    Text("Nama: ${user.name}")
                     Text("Username: ${user.username}")
                     Text("Role: ${user.role}")
                 } else {

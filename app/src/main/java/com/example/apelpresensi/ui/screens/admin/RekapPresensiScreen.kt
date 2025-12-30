@@ -17,7 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import com.example.apelpresensi.data.remote.dto.PresensiResponse
+import com.example.apelpresensi.data.remote.dto.PresensiDetailResponse
 import com.example.apelpresensi.ui.components.MainTopAppBar
 import com.example.apelpresensi.ui.components.ProfileDialog
 import com.example.apelpresensi.ui.viewmodel.AdminViewModel
@@ -38,17 +38,17 @@ fun RekapPresensiScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // State untuk Search dan Filter
     var searchQuery by remember { mutableStateOf("") }
     var selectedStatus by remember { mutableStateOf("Semua") }
     var selectedClass by remember { mutableStateOf("Semua") }
 
     LaunchedEffect(scheduleId) {
+        // Pastikan nama method di AdminViewModel adalah fetchRekapPresensi
+        // sesuai diskusi sinkronisasi backend sebelumnya
         viewModel.fetchRekap(scheduleId)
         authViewModel.fetchMe()
     }
 
-    // Logika Filter dan Sorting (Nama)
     val filteredList = remember(searchQuery, selectedStatus, selectedClass, viewModel.rekapList.value) {
         viewModel.rekapList.value
             .filter { item ->
@@ -56,10 +56,9 @@ fun RekapPresensiScreen(
                         (selectedStatus == "Semua" || item.status == selectedStatus) &&
                         (selectedClass == "Semua" || item.kelas == selectedClass)
             }
-            .sortedBy { it.nama } // Urutkan berdasarkan Nama
+            .sortedBy { it.nama }
     }
 
-    // Mendapatkan daftar kelas unik untuk filter dropdown
     val availableClasses = remember(viewModel.rekapList.value) {
         listOf("Semua") + viewModel.rekapList.value.map { it.kelas }.distinct().sorted()
     }
@@ -80,32 +79,29 @@ fun RekapPresensiScreen(
             }
         }
     ) { padding ->
-        Column(modifier = Modifier
-            .padding(padding)
-            .fillMaxSize()) {
-            // Search Bar
+        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 placeholder = { Text("Cari Nama atau NIM...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Default.Search, null) },
                 singleLine = true
             )
 
-            // Filter Row (Status & Kelas)
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Filter Status
+                // FILTER STATUS - Diperbarui agar sesuai status dari Backend baru
                 var statusExpanded by remember { mutableStateOf(false) }
                 Box(modifier = Modifier.weight(1f)) {
                     OutlinedButton(onClick = { statusExpanded = true }, modifier = Modifier.fillMaxWidth()) {
                         Text(selectedStatus)
                     }
                     DropdownMenu(expanded = statusExpanded, onDismissRequest = { statusExpanded = false }) {
-                        listOf("Semua", "HADIR", "TERLAMBAT", "TIDAK_HADIR").forEach { status ->
+                        // Tambahkan status IZIN, SAKIT, dan TIDAK_HADIR
+                        listOf("Semua", "HADIR", "TERLAMBAT", "IZIN", "SAKIT", "TIDAK_HADIR").forEach { status ->
                             DropdownMenuItem(
                                 text = { Text(status) },
                                 onClick = { selectedStatus = status; statusExpanded = false }
@@ -114,7 +110,6 @@ fun RekapPresensiScreen(
                     }
                 }
 
-                // Filter Kelas
                 var classExpanded by remember { mutableStateOf(false) }
                 Box(modifier = Modifier.weight(1f)) {
                     OutlinedButton(onClick = { classExpanded = true }, modifier = Modifier.fillMaxWidth()) {
@@ -152,12 +147,19 @@ fun RekapPresensiScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(text = item.nama, fontWeight = FontWeight.Bold)
                                 Text(text = "NIM: ${item.nim} | Kelas: ${item.kelas}", style = MaterialTheme.typography.bodySmall)
+                                // Tampilkan catatan jika ada (misal alasan izin)
+                                if (!item.catatan.isNullOrBlank()) {
+                                    Text(text = "Catatan: ${item.catatan}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                }
                             }
 
+                            // WARNA BADGE - Diperbarui agar lebih detail
                             val (color, text) = when (item.status) {
                                 "HADIR" -> Color(0xFF4CAF50) to "HADIR"
                                 "TERLAMBAT" -> Color(0xFFFFA000) to "TERLAMBAT"
-                                else -> Color.Red to "TIDAK HADIR"
+                                "IZIN", "SAKIT" -> Color(0xFF2196F3) to item.status
+                                "TIDAK_HADIR" -> Color.Red to "TIDAK_HADIR"
+                                else -> Color.Gray to item.status
                             }
 
                             Surface(color = color, shape = MaterialTheme.shapes.extraSmall) {
@@ -189,25 +191,19 @@ fun RekapPresensiScreen(
     }
 }
 // Fungsi Export CSV
-fun exportToCSVFile(context: Context, data: List<PresensiResponse>, fileName: String) {
-    val header = "Kelas,NIM,Nama,Status Kehadiran,Status Keterlambatan\n"
+fun exportToCSVFile(context: Context, data: List<PresensiDetailResponse>, fileName: String) {
+    val header = "Kelas,NIM,Nama,Status,Catatan\n"
     val content = data.joinToString("\n") { item ->
-        val kehadiran = if (item.status == "TIDAK_HADIR") "Tidak Hadir" else "Hadir"
-        val keterlambatan = if (item.status == "TERLAMBAT") "Terlambat" else "Tepat Waktu"
-        "${item.kelas},${item.nim},${item.nama},$kehadiran,$keterlambatan"
+        // Langsung gunakan item.status karena sudah deskriptif (HADIR/TIDAK_HADIR/IZIN dll)
+        val catatan = item.catatan?.replace(",", " ") ?: "" // Bersihkan koma agar CSV tidak berantakan
+        "${item.kelas},${item.nim},${item.nama},${item.status},$catatan"
     }
 
     val fullData = header + content
-
     try {
-        // Simpan ke Cache aplikasi
         val file = File(context.cacheDir, "$fileName.csv")
         FileOutputStream(file).use { it.write(fullData.toByteArray()) }
-
-        // Ambil URI file menggunakan FileProvider
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-
-        // Share File
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/csv"
             putExtra(Intent.EXTRA_STREAM, uri)

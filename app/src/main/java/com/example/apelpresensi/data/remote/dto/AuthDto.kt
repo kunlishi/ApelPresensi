@@ -25,6 +25,6 @@ data class RegisterRequest(
 data class UserResponse(
     val id: Long,
     val username: String,
-    val nama: String,
+    val name: String,
     val role: String
 )

@@ -42,7 +42,8 @@ fun AdminDashboard(
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var scheduleIdToDelete by remember { mutableStateOf<Long?>(null) }
     val scope = rememberCoroutineScope()
-    val pendingCount = viewModel.izinList.count{ it.status == "PENDING"}
+    val pendingCount = viewModel.izinList.count { it.statusBukti == "MENUNGGU" }
+    // 2. Buat Animasi untuk Badge
     val infiniteTransition = rememberInfiniteTransition(label = "BlinkTransition")
     val alphaAnim by infiniteTransition.animateFloat(
         initialValue = 1f,

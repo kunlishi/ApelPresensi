@@ -9,10 +9,15 @@ data class MahasiswaResponse(
 
 data class IzinResponse(
     val id: Long,
+    val scheduleId: Long,
+    val tanggal: String,
+    val tingkat: String,
     val mahasiswaNim: String,
     val mahasiswaNama: String,
-    val jenis: String, // IZIN atau SAKIT
-    val tanggal: String,
-    val keterangan: String,
-    val status: String // PENDING, APPROVED, REJECTED
+    val jenis: String,
+    val statusBukti: String, // Samakan dengan backend
+    val keterangan: String,      // Samakan dengan backend
+    val catatanAdmin: String?,
+    val hasBukti: Boolean,
+    val buktiBase64: String?
 )

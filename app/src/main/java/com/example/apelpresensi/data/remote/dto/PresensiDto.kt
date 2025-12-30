@@ -19,3 +19,19 @@ data class PresensiResponse(
     val status: String, // HADIR atau TERLAMBAT
     val createdBySpd: String?
 )
+
+data class PresensiDetailResponse(
+    val nim: String,
+    val nama: String,
+    val kelas: String,
+    val status: String, // HADIR, TERLAMBAT, IZIN, SAKIT, ALFA
+    val catatan: String?
+)
+
+
+data class ScanResponse(
+    val status: String, // HADIR, TERLAMBAT, NEED_CONFIRMATION, ALREADY_PRESENT, ERROR
+    val message: String,
+    val nim: String?,
+    val nama: String?
+)

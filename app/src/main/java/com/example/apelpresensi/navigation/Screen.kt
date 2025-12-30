@@ -10,4 +10,5 @@ sealed class Screen(val route: String) {
     object RiwayatPresensi: Screen("riwayat_presensi")
     object RekapPresensi: Screen("rekap_presensi/{id}")
     object IzinValidation : Screen("izin_validation")
+    object RiwayatIzin : Screen("riwayat_izin")
 }

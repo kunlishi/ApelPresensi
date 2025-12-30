@@ -4,6 +4,7 @@ import com.example.apelpresensi.data.remote.ApiService
 import com.example.apelpresensi.data.remote.dto.IzinResponse
 import com.example.apelpresensi.data.remote.dto.JadwalRequest
 import com.example.apelpresensi.data.remote.dto.JadwalResponse
+import com.example.apelpresensi.data.remote.dto.PresensiDetailResponse
 import com.example.apelpresensi.data.remote.dto.PresensiResponse
 import retrofit2.Response
 
@@ -21,11 +22,15 @@ class AdminRepository(private val apiService: ApiService) {
         return apiService.getRekapByJadwal("Bearer $token", scheduleId)
     }
 
+    suspend fun getRekapPresensi(token: String, scheduleId: Long): Response<List<PresensiDetailResponse>> {
+        return apiService.getRekapPresensi("Bearer $token", scheduleId)
+    }
+
     suspend fun getAllIzin(token: String): Response<List<IzinResponse>> {
         return apiService.getAllIzin("Bearer $token")
     }
 
-    suspend fun validateIzin(token: String, id: Long, status: String): Response<Unit> {
-        return apiService.validateIzin("Bearer $token", id, status)
+    suspend fun validateIzin(token: String, id: Long, status: String, catatanAdmin: String): Response<Unit> {
+        return apiService.validateIzin("Bearer $token", id, status, catatanAdmin)
     }
 }

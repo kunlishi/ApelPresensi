@@ -9,6 +9,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.apelpresensi.data.local.PreferenceManager
+import com.example.apelpresensi.data.remote.RetrofitClient.apiService
+import com.example.apelpresensi.data.remote.dto.IzinResponse
 import com.example.apelpresensi.data.remote.dto.MahasiswaResponse
 import com.example.apelpresensi.data.remote.dto.PresensiResponse
 import com.example.apelpresensi.data.repository.MahasiswaRepository
@@ -47,24 +49,24 @@ class MahasiswaViewModel(
     private val _profileState = mutableStateOf<MahasiswaState>(MahasiswaState.Loading)
     val profileState: State<MahasiswaState> = _profileState
 
-    // State Upload (Sekarang sudah di dalam class)
+    private val _izinHistory = mutableStateOf<List<IzinResponse>>(emptyList())
+    val izinHistory: State<List<IzinResponse>> = _izinHistory
+
+    private val _isFetchingIzin = mutableStateOf(false)
+    val isFetchingIzin: State<Boolean> = _isFetchingIzin
+
     private val _uploadStatus = mutableStateOf<UploadState>(UploadState.Idle)
     val uploadStatus: State<UploadState> = _uploadStatus
 
-    // State Formulir Izin (Pindahkan ke sini agar tidak tereset)
-    var keterangan by mutableStateOf("")
-    var jenisIzin by mutableStateOf("IZIN")
-    var selectedUri by mutableStateOf<Uri?>(null)
+    var formKeterangan by mutableStateOf("")
+    var formJenisIzin by mutableStateOf("IZIN")
+    var formSelectedUri by mutableStateOf<Uri?>(null)
 
-    // Fungsi untuk mereset status upload (Dibutuhkan oleh IzinScreen)
-    fun resetUploadStatus() {
-        _uploadStatus.value = UploadState.Idle
-    }
-
+    // Fungsi untuk membersihkan form (Panggil saat logout atau setelah sukses)
     fun resetForm() {
-        keterangan = ""
-        jenisIzin = "IZIN"
-        selectedUri = null
+        formKeterangan = ""
+        formJenisIzin = "IZIN"
+        formSelectedUri = null
         _uploadStatus.value = UploadState.Idle
     }
 
@@ -86,16 +88,15 @@ class MahasiswaViewModel(
         }
     }
 
-    fun uploadIzin(context: Context, uri: Uri, alasan: String, jenis: String) {
+    fun uploadIzin(context: Context, uri: Uri, jenis: String, keterangan: String) {
         val token = prefManager.getAuthToken() ?: return
         val tanggal = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 
         viewModelScope.launch {
-            _uploadStatus.value = UploadState.Loading
+            _uploadStatus.value = UploadState.Loading // TRIGGER LOADING
             try {
-                val mimeType = context.contentResolver.getType(uri) ?: "image/*"
-                val filePart = prepareFilePart(context, "file", uri)
-                val response = repository.submitIzin(token, alasan, tanggal, jenis, filePart)
+                val filePart = prepareFilePart(context, "bukti", uri) // Gunakan part "bukti"
+                val response = repository.submitIzin(token, tanggal, "3", jenis, keterangan, filePart)
 
                 if (response.isSuccessful) {
                     _uploadStatus.value = UploadState.Success("Pengajuan izin berhasil dikirim!")
@@ -103,10 +104,11 @@ class MahasiswaViewModel(
                     _uploadStatus.value = UploadState.Error("Gagal mengirim: ${response.message()}")
                 }
             } catch (e: Exception) {
-                _uploadStatus.value = UploadState.Error("Terjadi kesalahan jaringan.")
+                _uploadStatus.value = UploadState.Error("Kesalahan jaringan.")
             }
         }
     }
+
 
     private fun prepareFilePart(context: Context, partName: String, fileUri: Uri): MultipartBody.Part {
         // 1. Dapatkan tipe MIME asli dari file (image/jpeg, application/pdf, dll)
@@ -143,6 +145,23 @@ class MahasiswaViewModel(
                 }
             } catch (e: Exception) {
                 // Handle error jika diperlukan
+            }
+        }
+    }
+
+    fun fetchMyIzin() {
+        val token = prefManager.getAuthToken() ?: return
+        viewModelScope.launch {
+            _isFetchingIzin.value = true
+            try {
+                val response = repository.getMyIzin(token)
+                if (response.isSuccessful) {
+                    _izinHistory.value = response.body() ?: emptyList()
+                }
+            } catch (e: Exception) {
+                // Handle error log
+            } finally {
+                _isFetchingIzin.value = false
             }
         }
     }
