@@ -28,10 +28,22 @@ data class PresensiDetailResponse(
     val catatan: String?
 )
 
-
 data class ScanResponse(
     val status: String, // HADIR, TERLAMBAT, NEED_CONFIRMATION, ALREADY_PRESENT, ERROR
     val message: String,
     val nim: String?,
     val nama: String?
+)
+
+data class PresensiRecordResponse(
+    val id: Long,
+    val scheduleId: Long,
+    val tanggal: String,          // Format: "yyyy-MM-dd"
+    val tingkat: String,
+    val nim: String,
+    val nama: String,
+    val kelas: String? = null,    // Optional sesuai backend
+    val waktuPresensi: String,    // Format ISO LocalDateTime: "yyyy-MM-dd'T'HH:mm:ss"
+    val status: String,           // HADIR, TERLAMBAT, TIDAK_HADIR
+    val createdBySpd: String? = null
 )

@@ -32,6 +32,7 @@ fun RekapPresensiScreen(
     viewModel: AdminViewModel,
     authViewModel: AuthViewModel,
     onBack: () -> Unit,
+    onNavigateToChangePassword: () -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
     var showProfile by remember { mutableStateOf(false) }
@@ -185,6 +186,7 @@ fun RekapPresensiScreen(
                         onNavigateToLogin()
                     }
                 },
+                onChangePassword = onNavigateToChangePassword,
                 onDismiss = { showProfile = false }
             )
         }

@@ -44,6 +44,7 @@ fun IzinValidationScreen(
     viewModel: AdminViewModel,
     authViewModel: AuthViewModel,
     onBack: () -> Unit,
+    onNavigateToChangePassword: () -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
     val context = LocalContext.current
@@ -266,6 +267,7 @@ fun IzinValidationScreen(
                         onNavigateToLogin()
                     }
                 },
+                onChangePassword = onNavigateToChangePassword,
                 onDismiss = { showProfile = false }
             )
         }

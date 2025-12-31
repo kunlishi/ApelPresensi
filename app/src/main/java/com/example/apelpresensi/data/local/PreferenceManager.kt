@@ -23,6 +23,10 @@ class PreferenceManager(context: Context) {
         }.apply()
     }
 
+    fun getUserRole(): String? {
+        return prefs.getString("user_role", null)
+    }
+
     fun clearSession() {
         prefs.edit().clear().apply()
     }

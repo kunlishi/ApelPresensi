@@ -18,6 +18,7 @@ import com.example.apelpresensi.ui.screens.admin.IzinValidationScreen
 import com.example.apelpresensi.ui.screens.admin.RekapPresensiScreen
 import com.example.apelpresensi.ui.screens.auth.LoginScreen
 import com.example.apelpresensi.ui.screens.auth.RegisterScreen
+import com.example.apelpresensi.ui.screens.auth.ChangePasswordScreen
 import com.example.apelpresensi.ui.screens.mahasiswa.IzinScreen
 import com.example.apelpresensi.ui.screens.mahasiswa.RiwayatIzinScreen
 import com.example.apelpresensi.ui.screens.mahasiswa.RiwayatPresensiScreen
@@ -100,6 +101,16 @@ fun NavGraph(
             )
         }
 
+        composable(Screen.ChangePassword.route) {
+            ChangePasswordScreen(
+                viewModel = authViewModel,
+                onSuccess = {
+                    navController.popBackStack() // Kembali setelah sukses
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
         // --- ROLE: ADMIN ---
         composable(Screen.AdminDashboard.route) {
             AdminDashboard(
@@ -107,6 +118,7 @@ fun NavGraph(
                 authViewModel = authViewModel,
                 onRekapClick = { id -> navController.navigate("rekap_presensi/$id") },
                 onIzinClick = { navController.navigate(Screen.IzinValidation.route) },
+                onNavigateToChangePassword = { navController.navigate(Screen.ChangePassword.route) },
                 onNavigateToLogin = {
                     navController.navigate(Screen.Login.route) { popUpTo(0) }
                 }
@@ -123,6 +135,7 @@ fun NavGraph(
                 viewModel = adminViewModel,
                 authViewModel = authViewModel,
                 onBack = { navController.popBackStack() },
+                onNavigateToChangePassword = { navController.navigate(Screen.ChangePassword.route) },
                 onNavigateToLogin = {
                     navController.navigate(Screen.Login.route) { popUpTo(0) }
                 }
@@ -133,6 +146,7 @@ fun NavGraph(
                 viewModel = adminViewModel,
                 authViewModel = authViewModel,
                 onBack = { navController.popBackStack() },
+                onNavigateToChangePassword = { navController.navigate(Screen.ChangePassword.route) },
                 onNavigateToLogin = {
                     navController.navigate(Screen.Login.route) { popUpTo(0) }
                 }
@@ -142,20 +156,38 @@ fun NavGraph(
         // --- ROLE: SPD ---
         composable(Screen.SpdDashboard.route) {
             SpdDashboard(
+                viewModel = spdViewModel,
                 authViewModel = authViewModel,
-                onScanClick = { tingkat -> navController.navigate("qr_scanner/$tingkat") },
+                onScheduleSelected = { id ->
+                    // Navigasi ke scanner dengan membawa ID Jadwal (Long)
+                    navController.navigate("qr_scanner/$id")
+                },
+                onNavigateToChangePassword = { navController.navigate(Screen.ChangePassword.route) },
                 onNavigateToLogin = {
-                    navController.navigate(Screen.Login.route) { popUpTo(0) }
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.SpdDashboard.route) { inclusive = true }
+                    }
                 }
             )
         }
 
-        composable("qr_scanner/{scheduleId}") { backStackEntry ->
-            val scheduleId = backStackEntry.arguments?.getString("scheduleId")?.toLong() ?: 0L
+        composable(
+            route = "qr_scanner/{scheduleId}",
+            arguments = listOf(
+                navArgument("scheduleId") { type = NavType.LongType } // Menjamin tipe data Long
+            )
+        ) { backStackEntry ->
+            // Mengambil ID dari arguments secara langsung sebagai Long
+            val scheduleId = backStackEntry.arguments?.getLong("scheduleId") ?: 0L
+
             QrScannerScreen(
                 viewModel = spdViewModel,
                 scheduleId = scheduleId,
-                onBack = { navController.popBackStack() }
+                onBack = {
+                    // Reset state scanner sebelum kembali agar tidak nyangkut di state Success/Error
+                    spdViewModel.resetScanner()
+                    navController.popBackStack()
+                }
             )
         }
 
@@ -170,6 +202,7 @@ fun NavGraph(
                 onIzinClick = { navController.navigate(Screen.Izin.route) },
                 onRiwayatClick = { navController.navigate(Screen.RiwayatPresensi.route) },
                 onRiwayatIzinClick = { navController.navigate(Screen.RiwayatIzin.route) }, // Tambahkan ini
+                onNavigateToChangePassword = { navController.navigate(Screen.ChangePassword.route) },
                 onNavigateToLogin = {
                     navController.navigate(Screen.Login.route) { popUpTo(0) }
                 }
@@ -181,6 +214,7 @@ fun NavGraph(
                 viewModel = mhsViewModel,
                 authViewModel = authViewModel,
                 onBack = { navController.popBackStack() },
+                onNavigateToChangePassword = { navController.navigate(Screen.ChangePassword.route) },
                 onNavigateToLogin = {
                     navController.navigate(Screen.Login.route) { popUpTo(0) }
                 }
@@ -192,6 +226,7 @@ fun NavGraph(
                 viewModel = mhsViewModel,
                 authViewModel = authViewModel,
                 onBack = { navController.popBackStack() },
+                onNavigateToChangePassword = { navController.navigate(Screen.ChangePassword.route) },
                 onNavigateToLogin = {
                     navController.navigate(Screen.Login.route) { popUpTo(0) }
                 }
@@ -203,6 +238,7 @@ fun NavGraph(
                 viewModel = mhsViewModel,
                 authViewModel = authViewModel,
                 onBack = { navController.popBackStack() },
+                onNavigateToChangePassword = { navController.navigate(Screen.ChangePassword.route) },
                 onNavigateToLogin = {
                     navController.navigate(Screen.Login.route) { popUpTo(0) }
                 }

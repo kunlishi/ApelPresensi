@@ -32,6 +32,7 @@ fun IzinScreen(
     viewModel: MahasiswaViewModel,
     authViewModel: AuthViewModel,
     onBack: () -> Unit,
+    onNavigateToChangePassword: () -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
     val context = LocalContext.current
@@ -204,6 +205,7 @@ fun IzinScreen(
                         onNavigateToLogin()
                     }
                 },
+                onChangePassword = onNavigateToChangePassword,
                 onDismiss = { showProfile = false }
             )
         }

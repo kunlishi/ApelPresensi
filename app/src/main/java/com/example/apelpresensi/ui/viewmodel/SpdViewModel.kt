@@ -1,24 +1,25 @@
 package com.example.apelpresensi.ui.viewmodel
 
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.apelpresensi.data.local.PreferenceManager
-import com.example.apelpresensi.data.remote.dto.PresensiRequest
-import com.example.apelpresensi.data.remote.dto.PresensiResponse
+import com.example.apelpresensi.data.remote.dto.ApelSchedule
+import com.example.apelpresensi.data.remote.dto.PresensiRecordResponse
 import com.example.apelpresensi.data.remote.dto.ScanResponse
 import com.example.apelpresensi.data.repository.PresensiRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 
 sealed class ScannerState {
     object Idle : ScannerState()
     object Loading : ScannerState()
-    data class Success(val data: PresensiResponse) : ScannerState()
-    data class NeedConfirmation(val data: ScanResponse) : ScannerState() // Tambahkan ini
+    data class Success(val data: ScanResponse) : ScannerState()
+    data class NeedConfirmation(val data: ScanResponse) : ScannerState()
     data class Error(val message: String) : ScannerState()
 }
 
@@ -26,46 +27,134 @@ class SpdViewModel(
     private val repository: PresensiRepository,
     private val prefManager: PreferenceManager
 ) : ViewModel() {
-    private val _scannerState = mutableStateOf<ScannerState>(ScannerState.Idle)
-    // Set untuk menyimpan NIM yang sudah berhasil di-scan dalam sesi ini
-    private val scannedNims = mutableSetOf<String>()
-    val scannerState: State<ScannerState> = _scannerState
-    var scanResult = mutableStateOf<ScanResponse?>(null)
-        private set
-    var isProcessing by mutableStateOf(false)
 
-    fun processScannedNim(nim: String, tingkat: String, isTerlambat: Boolean = false) {
-        // 1. Validasi Lokal: Cek apakah NIM sudah ada di daftar sukses
+    private val _scannerState = mutableStateOf<ScannerState>(ScannerState.Idle)
+    val scannerState: State<ScannerState> = _scannerState
+
+    private val _availableSchedules = mutableStateOf<List<ApelSchedule>>(emptyList())
+    val availableSchedules: State<List<ApelSchedule>> = _availableSchedules
+    var searchQuery by mutableStateOf("")
+        private set
+    private val scannedNims = mutableSetOf<String>()
+    private val _scheduleHistory = mutableStateOf<List<PresensiRecordResponse>>(emptyList())
+    val scheduleHistory: State<List<PresensiRecordResponse>> = _scheduleHistory
+
+    var isRefreshing by mutableStateOf(false)
+        private set
+
+    fun fetchTodaySchedules() {
+        val token = prefManager.getAuthToken() ?: return
+        viewModelScope.launch {
+            try {
+                val response = repository.getSchedulesForSpd(token)
+                if (response.isSuccessful) {
+                    _availableSchedules.value = response.body() ?: emptyList()
+                }
+            } catch (e: Exception) {
+                _scannerState.value = ScannerState.Error("Gagal memuat jadwal")
+            }
+        }
+    }
+
+    fun refreshScreen() {
+        viewModelScope.launch {
+            isRefreshing = true
+            fetchTodaySchedules()
+            delay(500)
+            isRefreshing = false
+        }
+    }
+
+    fun fetchHistoryBySchedule(scheduleId: Long) {
+        val token = prefManager.getAuthToken() ?: return
+        viewModelScope.launch {
+            try {
+                val response = repository.getHistoryBySchedule(token, scheduleId)
+                if (response.isSuccessful) {
+                    _scheduleHistory.value = response.body() ?: emptyList()
+                }
+            } catch (e: Exception) { /* Handle error */ }
+        }
+    }
+
+    fun scanQR(nim: String, scheduleId: Long) {
         if (scannedNims.contains(nim)) {
-            _scannerState.value = ScannerState.Error("Mahasiswa dengan NIM $nim sudah berhasil di-input sebelumnya!")
+            _scannerState.value = ScannerState.Error("Mahasiswa NIM $nim sudah di-scan")
             return
         }
 
         val token = prefManager.getAuthToken() ?: return
-        val tanggal = LocalDate.now().toString()
-        val request = PresensiRequest(tanggal, tingkat, nim)
+        _scannerState.value = ScannerState.Loading
 
         viewModelScope.launch {
-            _scannerState.value = ScannerState.Loading
             try {
-                // Menggunakan repository secara konsisten
-                val response = if (isTerlambat) {
-                    repository.markTerlambat(token, request)
-                } else {
-                    repository.recordPresensi(token, request)
-                }
-
+                val response = repository.scanQR(token, nim, scheduleId)
                 if (response.isSuccessful) {
-                    // 2. Jika sukses, masukkan NIM ke dalam daftar pengecekan
-                    scannedNims.add(nim)
-                    _scannerState.value = ScannerState.Success(response.body()!!)
+                    val body = response.body()
+                    // Tangani status dari backend secara spesifik
+                    when (body?.status) {
+                        "NEED_CONFIRMATION" -> _scannerState.value = ScannerState.NeedConfirmation(body)
+                        "ALREADY_PRESENT" -> _scannerState.value = ScannerState.Error("Mahasiswa sudah presensi")
+                        else -> {
+                            scannedNims.add(nim)
+                            _scannerState.value = ScannerState.Success(body!!)
+                        }
+                    }
                 } else {
-                    // Tangani jika server mengirimkan pesan "sudah presensi" (misal HTTP 400)
-                    val errorMsg = response.errorBody()?.string() ?: "Gagal mencatat presensi"
-                    _scannerState.value = ScannerState.Error(errorMsg)
+                    _scannerState.value = ScannerState.Error("QR Tidak Valid / Gagal Scan")
                 }
             } catch (e: Exception) {
-                _scannerState.value = ScannerState.Error("Koneksi gagal: ${e.message}")
+                _scannerState.value = ScannerState.Error("Masalah Jaringan: ${e.message}")
+            }
+        }
+    }
+
+    fun confirmManual(nim: String, scheduleId: Long, status: String) {
+        val token = prefManager.getAuthToken() ?: return
+        _scannerState.value = ScannerState.Loading
+
+        viewModelScope.launch {
+            try {
+                val response = repository.confirmPresensi(token, nim, scheduleId, status)
+                if (response.isSuccessful) {
+                    scannedNims.add(nim)
+                    // FIX: Gunakan body dari response yang sekarang sudah berupa ScanResponse JSON
+                    _scannerState.value = ScannerState.Success(response.body()!!)
+                } else {
+                    _scannerState.value = ScannerState.Error("Gagal mengirim konfirmasi")
+                }
+            } catch (e: Exception) {
+                _scannerState.value = ScannerState.Error("Kesalahan Jaringan")
+            }
+        }
+    }
+
+    val filteredHistory by derivedStateOf {
+        if (searchQuery.isEmpty()) {
+            scheduleHistory.value
+        } else {
+            scheduleHistory.value.filter {
+                it.nama?.contains(searchQuery, ignoreCase = true) == true ||
+                        it.nim.contains(searchQuery)
+            }
+        }
+    }
+
+    fun updateSearchQuery(query: String) {
+        searchQuery = query
+    }
+
+    fun deletePresensi(presensiId: Long, scheduleId: Long) {
+        val token = prefManager.getAuthToken() ?: return
+        viewModelScope.launch {
+            try {
+                val response = repository.deletePresensi(token, presensiId)
+                if (response.isSuccessful) {
+                    // Refresh list setelah dihapus
+                    fetchHistoryBySchedule(scheduleId)
+                }
+            } catch (e: Exception) {
+                _scannerState.value = ScannerState.Error("Gagal menghapus data")
             }
         }
     }
@@ -74,48 +163,8 @@ class SpdViewModel(
         _scannerState.value = ScannerState.Idle
     }
 
-    // Fungsi untuk membersihkan daftar scan jika petugas berganti tingkat
     fun clearScannedList() {
         scannedNims.clear()
         _scannerState.value = ScannerState.Idle
-    }
-    fun scanQR(nim: String, scheduleId: Long) {
-        if (isProcessing) return
-        val token = prefManager.getAuthToken() ?: return
-
-        viewModelScope.launch {
-            isProcessing = true
-            try {
-                val response = repository.scanQR(token, nim, scheduleId)
-                if (response.isSuccessful) {
-                    scanResult.value = response.body()
-                } else {
-                    scanResult.value = ScanResponse("ERROR", "QR Tidak Valid / Mahasiswa Tidak Terdaftar", null, null)
-                }
-            } catch (e: Exception) {
-                scanResult.value = ScanResponse("ERROR", "Kesalahan Jaringan", null, null)
-            } finally {
-                isProcessing = false
-            }
-        }
-    }
-
-    fun confirmManual(nim: String, scheduleId: Long, status: String) {
-        val token = prefManager.getAuthToken() ?: return
-        viewModelScope.launch {
-            try {
-                val response = repository.confirmPresensi(token, nim, scheduleId, status)
-                if (response.isSuccessful) {
-                    // Beri feedback sukses setelah konfirmasi manual
-                    scanResult.value = ScanResponse("SUCCESS", "Berhasil mencatat: $status", nim, null)
-                }
-            } catch (e: Exception) {
-                scanResult.value = ScanResponse("ERROR", "Gagal mengirim konfirmasi", null, null)
-            }
-        }
-    }
-
-    fun resetScanResult() {
-        scanResult.value = null
     }
 }

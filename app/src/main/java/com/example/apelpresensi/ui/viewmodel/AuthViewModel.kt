@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.apelpresensi.data.local.PreferenceManager
 import com.example.apelpresensi.data.remote.dto.AuthResponse
+import com.example.apelpresensi.data.remote.dto.ChangePasswordRequest
 import com.example.apelpresensi.data.remote.dto.LoginRequest
 import com.example.apelpresensi.data.remote.dto.RegisterRequest
 import com.example.apelpresensi.data.remote.dto.UserResponse
@@ -82,6 +83,42 @@ class AuthViewModel(
                 // Tangani error jika diperlukan
             }
         }
+    }
+
+    fun changePassword(old: String, new: String) {
+        val token = prefManager.getAuthToken() ?: return
+        _authState.value = AuthState.Loading
+
+        viewModelScope.launch {
+            try {
+                // Mengirim request ke PUT api/user/password
+                val response = repository.changePassword(token, ChangePasswordRequest(old, new))
+
+                if (response.isSuccessful) {
+                    val currentToken = prefManager.getAuthToken() ?: ""
+
+                    // Ambil role dari currentUser, jika null ambil dari prefManager
+                    val role = currentUser?.role ?: prefManager.getUserRole() ?: ""
+
+                    // Buat AuthResponse baru untuk memicu state Success
+                    _authState.value = AuthState.Success(
+                        AuthResponse(
+                            token = currentToken,
+                            role = role
+                        )
+                    )
+                } else {
+                    val errorMsg = response.errorBody()?.string() ?: "Gagal mengubah password"
+                    _authState.value = AuthState.Error(errorMsg)
+                }
+            } catch (e: Exception) {
+                _authState.value = AuthState.Error("Koneksi gagal: ${e.message}")
+            }
+        }
+    }
+
+    fun resetState() {
+        _authState.value = AuthState.Idle
     }
 
     fun logout() {

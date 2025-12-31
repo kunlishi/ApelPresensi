@@ -16,3 +16,11 @@ data class JadwalResponse(
     val tingkat: String,
     val keterangan: String?
 )
+
+data class ApelSchedule(
+    val id: Long,
+    val tanggalApel: String,
+    val waktuApel: String,
+    val tingkat: String,
+    val keterangan: String?
+)

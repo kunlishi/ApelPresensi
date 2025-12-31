@@ -28,3 +28,8 @@ data class UserResponse(
     val name: String,
     val role: String
 )
+
+data class ChangePasswordRequest(
+    val oldPassword: String,
+    val newPassword: String
+)

@@ -34,6 +34,7 @@ fun AdminDashboard(
     authViewModel: AuthViewModel,
     onRekapClick: (Long) -> Unit,
     onIzinClick: () -> Unit,
+    onNavigateToChangePassword: () -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
     // 1. Tambahkan state baru khusus untuk dialog tambah jadwal
@@ -177,6 +178,7 @@ fun AdminDashboard(
         if (showProfileDialog) {
             ProfileDialog(
                 user = authViewModel.currentUser,
+                onChangePassword = onNavigateToChangePassword,
                 onLogout = {scope.launch {
                     showProfileDialog = false // 1. Hilangkan jendela profil
                     kotlinx.coroutines.delay(150) // 2. Tunggu sebentar agar animasi dismissal terlihat

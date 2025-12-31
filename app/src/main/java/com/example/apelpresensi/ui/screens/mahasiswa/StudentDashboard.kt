@@ -30,7 +30,8 @@ fun StudentDashboard(
     onShowQrClick: () -> Unit,
     onIzinClick: () -> Unit,
     onRiwayatClick: () -> Unit,
-    onRiwayatIzinClick: () -> Unit, // Parameter baru untuk Riwayat Izin
+    onRiwayatIzinClick: () -> Unit,
+    onNavigateToChangePassword: () -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
     val state by viewModel.profileState
@@ -178,6 +179,7 @@ fun StudentDashboard(
                         onNavigateToLogin()
                     }
                 },
+                onChangePassword = onNavigateToChangePassword,
                 onDismiss = { showProfile = false }
             )
         }

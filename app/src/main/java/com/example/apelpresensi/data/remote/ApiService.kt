@@ -18,6 +18,12 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Response<UserResponse>
 
+    @PUT("api/user/password")
+    suspend fun changePassword(
+        @Header("Authorization") token: String,
+        @Body request: ChangePasswordRequest
+    ): Response<Unit>
+
     @POST("api/admin/jadwal")
     suspend fun createJadwal(
         @Header("Authorization") token: String,
@@ -85,7 +91,25 @@ interface ApiService {
         @Query("nim") nim: String,
         @Query("scheduleId") scheduleId: Long,
         @Query("status") status: String // "HADIR" atau "TERLAMBAT"
-    ): Response<String>
+    ): Response<ScanResponse>
+
+    @GET("api/spd/schedules")
+    suspend fun getSchedulesForSpd(
+        @Header("Authorization") token: String,
+        @Query("date") date: String? = null // Optional, default hari ini di backend
+    ): Response<List<ApelSchedule>>
+
+    @GET("api/spd/schedules/{scheduleId}/presensi")
+    suspend fun getHistoryBySchedule(
+        @Header("Authorization") token: String,
+        @Path("scheduleId") scheduleId: Long
+    ): Response<List<PresensiRecordResponse>>
+
+    @DELETE("api/spd/presensi/{id}")
+    suspend fun deletePresensi(
+        @Header("Authorization") token: String,
+        @Path("id") id: Long
+    ): Response<Void>
 
     @GET("api/mahasiswa/me")
     suspend fun getMyProfile(

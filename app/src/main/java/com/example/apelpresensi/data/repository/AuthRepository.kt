@@ -2,6 +2,7 @@ package com.example.apelpresensi.data.repository
 
 import com.example.apelpresensi.data.remote.ApiService
 import com.example.apelpresensi.data.remote.dto.AuthResponse
+import com.example.apelpresensi.data.remote.dto.ChangePasswordRequest
 import com.example.apelpresensi.data.remote.dto.LoginRequest
 import com.example.apelpresensi.data.remote.dto.RegisterRequest
 import com.example.apelpresensi.data.remote.dto.UserResponse
@@ -20,5 +21,9 @@ class AuthRepository(private val apiService: ApiService) {
 
     suspend fun getCurrentUser(token: String): Response<UserResponse> {
         return apiService.getCurrentUser("Bearer $token")
+    }
+
+    suspend fun changePassword(token: String, request: ChangePasswordRequest): Response<Unit> {
+        return apiService.changePassword("Bearer $token", request)
     }
 }
