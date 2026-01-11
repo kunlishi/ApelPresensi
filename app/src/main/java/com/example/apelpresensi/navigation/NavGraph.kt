@@ -93,11 +93,10 @@ fun NavGraph(
             RegisterScreen(
                 viewModel = authViewModel,
                 onRegisterSuccess = {
-                    navController.navigate(Screen.StudentDashboard.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
-                    }
+                    authViewModel.resetState()
+                    navController.popBackStack()
                 },
-                onBackToLogin = { navController.popBackStack() }
+                onBackToLogin = {navController.popBackStack()}
             )
         }
 
